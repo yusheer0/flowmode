@@ -5,6 +5,9 @@
       <div :class="$style.actionsBar">
         <div :class="$style.actionsRow">
           <div :class="$style.headerActions">
+            <button :class="[$style.btn, $style.btnSecondary]" @click="refreshEntries" title="Обновить записи из Telegram">
+              🔄 Обновить
+            </button>
             <div :class="$style.searchBox">
               <input
                 v-model="searchQuery"
@@ -140,7 +143,7 @@
 
             <!-- Аудиоплеер для голосовых сообщений -->
             <div v-if="entry.audioPath" :class="$style.audioPlayer">
-              <audio :class="$style.audioElement" controls :src="`file://${entry.audioPath}`"></audio>
+              <audio :class="$style.audioElement" controls :src="convertFileSrc(entry.audioPath)"></audio>
             </div>
 
             <div :class="$style.entryMeta">
@@ -245,7 +248,7 @@
 import { ref, computed } from 'vue'
 import { useDiaryStore, useCategoriesStore, useSettingsStore } from '@/stores'
 import type { DiaryEntry, Priority } from '@/types'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 
 const diaryStore = useDiaryStore()
 const categoriesStore = useCategoriesStore()
@@ -269,6 +272,32 @@ const formData = ref<Partial<DiaryEntry>>({
   tags: [],
   priority: 'medium',
 })
+
+// Функция обновления записей из Telegram
+async function refreshEntries(): Promise<void> {
+  const settings = settingsStore.settings
+  if (!settings.telegram.enabled || !settings.telegram.botToken) {
+    alert('Сначала настройте Telegram в настройках приложения')
+    return
+  }
+  
+  try {
+    // Вызываем функцию синхронизации из SettingsView через invoke
+    // Или просто обновляем lastUpdateId чтобы получить все сообщения
+    const updates = await invoke<TelegramUpdate[]>('get_telegram_updates', {
+      botToken: settings.telegram.botToken,
+      offset: (settings.telegram.lastUpdateId || 0) + 1,
+    })
+    
+    if (updates.length > 0) {
+      alert(`Получено ${updates.length} новых сообщений(ия)`)
+    } else {
+      alert('Нет новых сообщений')
+    }
+  } catch (error) {
+    alert('Ошибка обновления: ' + (error instanceof Error ? error.message : error))
+  }
+}
 
 // Контекстное меню
 const contextMenu = ref<{
@@ -500,6 +529,17 @@ async function sendTelegramNotificationIfNeeded(entry: DiaryEntry): Promise<void
     })
   } catch (error) {
     console.error('Ошибка отправки уведомления в Telegram:', error)
+  }
+}
+
+interface TelegramUpdate {
+  update_id: number
+  message?: {
+    text?: string
+    voice?: {
+      file_id: string
+      duration?: number
+    }
   }
 }
 </script>

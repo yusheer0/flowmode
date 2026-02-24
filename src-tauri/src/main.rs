@@ -218,7 +218,7 @@ fn save_telegram_voice(
 ) -> Result<String, String> {
     use std::io::Write;
     
-    // Скачиваем файл
+    // Скачиваем файл (OGG формат)
     let audio_data = get_telegram_file(bot_token, file_id)?;
     
     // Определяем директорию для хранения
@@ -230,7 +230,7 @@ fn save_telegram_voice(
     fs::create_dir_all(&app_data_dir)
         .map_err(|e| format!("Ошибка создания директории: {}", e))?;
     
-    // Сохраняем файл
+    // Сохраняем файл в OGG формате
     let file_path = app_data_dir.join(format!("{}.ogg", entry_id));
     let mut file = fs::File::create(&file_path)
         .map_err(|e| format!("Ошибка создания файла: {}", e))?;

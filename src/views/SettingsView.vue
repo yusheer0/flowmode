@@ -518,8 +518,10 @@ onMounted(async () => {
   }
   
   // Запускаем polling если включено
-  if (settingsStore.settings.telegram.createFromTelegram) {
+  if (settingsStore.settings.telegram.createFromTelegram || settingsStore.settings.telegram.saveVoice) {
     startTelegramPolling()
+    // Синхронизируем сообщения при запуске
+    await syncTelegramMessages()
   }
 })
 
@@ -539,99 +541,110 @@ async function startTelegramPolling(): Promise<void> {
   }
 
   telegramPollingInterval = setInterval(async () => {
-    const settings = settingsStore.settings
-    if (!settings.telegram.enabled || !settings.telegram.botToken) return
+    await checkTelegramForUpdates()
+  }, 3000) // Проверка каждые 3 секунды
+}
 
-    try {
-      const updates = await invoke<TelegramUpdate[]>('get_telegram_updates', {
-        botToken: settings.telegram.botToken,
-        offset: (settings.telegram.lastUpdateId || 0) + 1,
-      })
+// Синхронизация сообщений при запуске
+async function syncTelegramMessages(): Promise<void> {
+  await checkTelegramForUpdates()
+}
 
-      let maxUpdateId = settings.telegram.lastUpdateId || 0
+// Проверка Telegram на новые сообщения (используется в polling и при синхронизации)
+async function checkTelegramForUpdates(): Promise<void> {
+  const settings = settingsStore.settings
+  if (!settings.telegram.enabled || !settings.telegram.botToken) return
 
-      for (const update of updates) {
-        if (update.message) {
-          // Обработка текстовых сообщений с командой /note
-          if (update.message.text) {
-            const text = update.message.text.trim()
+  try {
+    const updates = await invoke<TelegramUpdate[]>('get_telegram_updates', {
+      botToken: settings.telegram.botToken,
+      offset: (settings.telegram.lastUpdateId || 0) + 1,
+    })
 
-            // Проверяем команду /note
-            if (text.startsWith('/note')) {
-              const content = text.substring(5).trim() // Всё после /note
+    let maxUpdateId = settings.telegram.lastUpdateId || 0
 
-              if (content) {
-                // Создаем запись из сообщения
-                const now = new Date().toISOString()
-                const today = now.split('T')[0]
+    for (const update of updates) {
+      if (update.message) {
+        // Обработка текстовых сообщений с командой /note
+        if (update.message.text) {
+          const text = update.message.text.trim()
 
-                const newEntry: DiaryEntry = {
-                  id: crypto.randomUUID(),
-                  date: today,
-                  title: content.length > 50 ? content.substring(0, 50) + '...' : content,
-                  content: content,
-                  categoryId: undefined,
-                  tags: ['telegram'],
-                  priority: 'medium',
-                  createdAt: now,
-                  updatedAt: now,
-                }
+          // Проверяем команду /note
+          if (text.startsWith('/note')) {
+            const content = text.substring(5).trim() // Всё после /note
 
-                diaryStore.addEntry(newEntry)
-              }
-            }
-          }
+            if (content) {
+              // Создаем запись из сообщения
+              const now = new Date().toISOString()
+              const today = now.split('T')[0]
 
-          // Обработка голосовых сообщений
-          if (settings.telegram.saveVoice && update.message.voice) {
-            const voice = update.message.voice
-            const now = new Date().toISOString()
-            const today = now.split('T')[0]
-            const entryId = crypto.randomUUID()
-
-            try {
-              // Сохраняем голосовое сообщение
-              const audioPath = await invoke<string>('save_telegram_voice', {
-                botToken: settings.telegram.botToken,
-                fileId: voice.file_id,
-                entryId: entryId,
-              })
-
-              // Создаем запись с аудио
               const newEntry: DiaryEntry = {
-                id: entryId,
+                id: crypto.randomUUID(),
                 date: today,
-                title: `Голосовое от ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
-                content: '',
+                title: content.length > 50 ? content.substring(0, 50) + '...' : content,
+                content: content,
                 categoryId: undefined,
-                tags: ['telegram', 'voice'],
+                tags: ['telegram'],
                 priority: 'medium',
                 createdAt: now,
                 updatedAt: now,
-                audioPath: audioPath,
               }
 
               diaryStore.addEntry(newEntry)
-            } catch (error) {
-              console.error('Ошибка сохранения голосового:', error)
             }
           }
+        }
 
-          // Обновляем maxUpdateId для всех сообщений
-          if (update.update_id > maxUpdateId) {
-            maxUpdateId = update.update_id
+        // Обработка голосовых сообщений
+        if (settings.telegram.saveVoice && update.message.voice) {
+          const voice = update.message.voice
+          const now = new Date().toISOString()
+          const today = now.split('T')[0]
+          const entryId = crypto.randomUUID()
+
+          try {
+            // Сохраняем голосовое сообщение
+            const audioPath = await invoke<string>('save_telegram_voice', {
+              botToken: settings.telegram.botToken,
+              fileId: voice.file_id,
+              entryId: entryId,
+            })
+
+            // Создаем запись с аудио
+            const newEntry: DiaryEntry = {
+              id: entryId,
+              date: today,
+              title: `Голосовое от ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
+              content: '',
+              categoryId: undefined,
+              tags: ['telegram', 'voice'],
+              priority: 'medium',
+              createdAt: now,
+              updatedAt: now,
+              audioPath: audioPath,
+            }
+
+            diaryStore.addEntry(newEntry)
+          } catch (error) {
+            console.error('Ошибка сохранения голосового:', error)
           }
         }
-      }
 
-      // Обновляем lastUpdateId один раз после обработки всех сообщений
-      if (maxUpdateId !== settings.telegram.lastUpdateId) {
-        settingsStore.updateTelegramSettings({ lastUpdateId: maxUpdateId })
+        // Обновляем maxUpdateId для всех сообщений
+        if (update.update_id > maxUpdateId) {
+          maxUpdateId = update.update_id
+        }
       }
-    } catch (error) {
-      console.error('Ошибка polling Telegram:', error)
     }
-  }, 3000) // Проверка каждые 3 секунды
+
+    // Обновляем lastUpdateId один раз после обработки всех сообщений
+    if (maxUpdateId !== settings.telegram.lastUpdateId) {
+      settingsStore.updateTelegramSettings({ lastUpdateId: maxUpdateId })
+    }
+  } catch (error) {
+    // Тихая ошибка при синхронизации (может не быть интернета)
+    console.log('Синхронизация Telegram:', error instanceof Error ? error.message : error)
+  }
 }
 
 interface TelegramUpdate {
