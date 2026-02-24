@@ -1,3 +1,5 @@
+export type Priority = 'high' | 'medium' | 'low'
+
 export interface DiaryEntry {
   id: string
   date: string
@@ -8,6 +10,8 @@ export interface DiaryEntry {
   createdAt: string
   updatedAt: string
   completed?: boolean
+  priority?: Priority
+  audioPath?: string  // Путь к аудиофайлу (для голосовых сообщений)
 }
 
 export interface Category {
@@ -28,6 +32,9 @@ export interface TelegramSettings {
   chatId: string
   enabled: boolean
   notifyTime: string
+  createFromTelegram: boolean  // Создавать записи из сообщений боту
+  saveVoice: boolean           // Сохранять голосовые сообщения
+  lastUpdateId?: number        // ID последнего обработанного сообщения
 }
 
 export interface AppSettings {

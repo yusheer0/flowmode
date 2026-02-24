@@ -1,0 +1,64 @@
+.appLayout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebarHeader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.appTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -1px;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: var(--color-text);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+
+  &:hover {
+    background-color: var(--color-bg);
+  }
+
+  &.routerLinkActive {
+    background-color: var(--color-primary);
+    color: white;
+  }
+}
+
+.navIcon {
+  font-size: 1.25rem;
+}
+
+.mainContent {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--color-bg);
+}

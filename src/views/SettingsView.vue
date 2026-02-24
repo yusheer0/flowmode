@@ -1,36 +1,29 @@
 <template>
-  <div class="settings-view">
-    <header class="view-header">
-      <h2 class="view-title">Настройки</h2>
-    </header>
-    
-    <div class="settings-content">
-      <section class="settings-section">
-        <h3 class="section-title">Внешний вид</h3>
-        
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Тема оформления</span>
-            <span class="setting-description">Выберите тему оформления</span>
+  <div :class="$style.settingsView">
+    <div :class="$style.settingsContent">
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Внешний вид</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Тема оформления</span>
+            <span :class="$style.settingDescription">Выберите тему оформления</span>
           </div>
-          <div class="setting-control">
+          <div :class="$style.settingControl">
             <button
-              class="theme-btn"
-              :class="{ active: settings.theme === 'light' }"
+              :class="[$style.themeBtn, { [$style.active]: settings.theme === 'light' }]"
               @click="setTheme('light')"
             >
               Светлая
             </button>
             <button
-              class="theme-btn"
-              :class="{ active: settings.theme === 'dark' }"
+              :class="[$style.themeBtn, { [$style.active]: settings.theme === 'dark' }]"
               @click="setTheme('dark')"
             >
               Тёмная
             </button>
             <button
-              class="theme-btn"
-              :class="{ active: settings.theme === 'mononoke' }"
+              :class="[$style.themeBtn, { [$style.active]: settings.theme === 'mononoke' }]"
               @click="setTheme('mononoke')"
             >
               Mononoke
@@ -38,57 +31,57 @@
           </div>
         </div>
       </section>
-      
-      <section class="settings-section">
-        <h3 class="section-title">Уведомления</h3>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Напоминания</span>
-            <span class="setting-description">Получать уведомления о записях</span>
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Уведомления</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Напоминания</span>
+            <span :class="$style.settingDescription">Получать уведомления о записях</span>
           </div>
-          <div class="setting-control">
-            <label class="toggle">
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
               <input
                 type="checkbox"
                 :checked="settings.notificationsEnabled"
                 @change="toggleNotifications"
               />
-              <span class="toggle-slider"></span>
+              <span :class="$style.toggleSlider"></span>
             </label>
           </div>
         </div>
       </section>
 
-      <section class="settings-section">
-        <h3 class="section-title">Telegram уведомления</h3>
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Telegram уведомления</h3>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Включить уведомления</span>
-            <span class="setting-description">Отправлять напоминания о записях в Telegram</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Включить уведомления</span>
+            <span :class="$style.settingDescription">Отправлять напоминания о записях в Telegram</span>
           </div>
-          <div class="setting-control">
-            <label class="toggle">
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
               <input
                 type="checkbox"
                 :checked="settings.telegram.enabled"
                 @change="toggleTelegramEnabled"
               />
-              <span class="toggle-slider"></span>
+              <span :class="$style.toggleSlider"></span>
             </label>
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Bot Token</span>
-            <span class="setting-description">Токен бота от @BotFather</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Bot Token</span>
+            <span :class="$style.settingDescription">Токен бота от @BotFather</span>
           </div>
-          <div class="setting-control">
+          <div :class="$style.settingControl">
             <input
               type="password"
-              class="input-field"
+              :class="$style.inputField"
               :value="settings.telegram.botToken"
               @input="updateBotToken"
               placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
@@ -96,22 +89,22 @@
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Chat ID</span>
-            <span class="setting-description">ID чата для уведомлений</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Chat ID</span>
+            <span :class="$style.settingDescription">ID чата для уведомлений</span>
           </div>
-          <div class="setting-control">
+          <div :class="$style.settingControl">
             <input
               type="text"
-              class="input-field"
+              :class="$style.inputField"
               :value="settings.telegram.chatId"
               @input="updateChatId"
               placeholder="123456789"
             />
-            <button 
-              class="btn btn-secondary btn-icon" 
-              @click="getChatId" 
+            <button
+              :class="[$style.btn, $style.btnSecondary, $style.btnIcon]"
+              @click="getChatId"
               :disabled="!settings.telegram.botToken || getChatIdLoading"
               title="Получить Chat ID автоматически"
             >
@@ -120,111 +113,153 @@
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Время уведомлений</span>
-            <span class="setting-description">Ежедневное напоминание в указанное время</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Время уведомлений</span>
+            <span :class="$style.settingDescription">Ежедневное напоминание в указанное время</span>
           </div>
-          <div class="setting-control">
+          <div :class="$style.settingControl">
             <input
               type="time"
-              class="input-field time-input"
+              :class="[$style.inputField, $style.timeInput]"
               :value="settings.telegram.notifyTime"
               @input="updateNotifyTime"
             />
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Проверка подключения</span>
-            <span class="setting-description">Отправить тестовое сообщение</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Проверка подключения</span>
+            <span :class="$style.settingDescription">Отправить тестовое сообщение</span>
           </div>
-          <div class="setting-control">
-            <button class="btn btn-secondary" @click="testConnection" :disabled="!canTestConnection">
+          <div :class="$style.settingControl">
+            <button :class="$style.btn" @click="testConnection" :disabled="!canTestConnection">
               Проверить
             </button>
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Как получить Chat ID</span>
-            <span class="setting-description">
-              1. Создайте бота в @BotFather<br>
-              2. Напишите боту любое сообщение (например, /start)<br>
-              3. Нажмите кнопку 🔍 справа от поля Chat ID<br>
-              4. Chat ID будет получен автоматически
-            </span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Как получить Chat ID</span>
+            <span :class="$style.settingDescription" v-html="getChatIdInstructions"></span>
           </div>
         </div>
       </section>
-      
-      <section class="settings-section">
-        <h3 class="section-title">Данные</h3>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Резервное копирование</span>
-            <span class="setting-description">Автоматическое создание резервных копий</span>
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Данные</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Резервное копирование</span>
+            <span :class="$style.settingDescription">Автоматическое создание резервных копий</span>
           </div>
-          <div class="setting-control">
-            <label class="toggle">
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
               <input
                 type="checkbox"
                 :checked="settings.backupEnabled"
                 @change="toggleBackup"
               />
-              <span class="toggle-slider"></span>
+              <span :class="$style.toggleSlider"></span>
             </label>
           </div>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Сворачивать при закрытии</span>
-            <span class="setting-description">Приложение будет сворачиваться в трей вместо закрытия</span>
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Сворачивать при закрытии</span>
+            <span :class="$style.settingDescription">Приложение будет сворачиваться в трей вместо закрытия</span>
           </div>
-          <div class="setting-control">
-            <label class="toggle">
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
               <input
                 type="checkbox"
                 :checked="settings.minimizeOnClose"
                 @change="toggleMinimizeOnClose"
               />
-              <span class="toggle-slider"></span>
+              <span :class="$style.toggleSlider"></span>
             </label>
           </div>
         </div>
-        
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Экспорт данных</span>
-            <span class="setting-description">Сохранить все записи в JSON файл</span>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Записи из Telegram</span>
+            <span :class="$style.settingDescription">Создавать записи из сообщений боту с командой /note</span>
           </div>
-          <div class="setting-control">
-            <button class="btn" @click="exportData">Экспорт</button>
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
+              <input
+                type="checkbox"
+                :checked="settings.telegram.createFromTelegram"
+                @change="toggleCreateFromTelegram"
+              />
+              <span :class="$style.toggleSlider"></span>
+            </label>
           </div>
         </div>
-        
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="setting-label">Импорт данных</span>
-            <span class="setting-description">Загрузить записи из JSON файла</span>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Сохранять голосовые</span>
+            <span :class="$style.settingDescription">Сохранять голосовые сообщения для прослушивания</span>
           </div>
-          <div class="setting-control">
-            <button class="btn" @click="importData">Импорт</button>
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
+              <input
+                type="checkbox"
+                :checked="settings.telegram.saveVoice"
+                @change="toggleSaveVoice"
+              />
+              <span :class="$style.toggleSlider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Как использовать</span>
+            <span :class="$style.settingDescription">
+              Отправьте боту сообщение:<br>
+              <code>/note Ваша задача</code><br><br>
+              Например:<br>
+              <code>/note Купить молоко</code><br>
+              <code>/note Позвонить врачу завтра в 15:00</code>
+            </span>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Экспорт данных</span>
+            <span :class="$style.settingDescription">Сохранить все записи в JSON файл</span>
+          </div>
+          <div :class="$style.settingControl">
+            <button :class="$style.btn" @click="exportData">Экспорт</button>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Импорт данных</span>
+            <span :class="$style.settingDescription">Загрузить записи из JSON файла</span>
+          </div>
+          <div :class="$style.settingControl">
+            <button :class="$style.btn" @click="importData">Импорт</button>
           </div>
         </div>
       </section>
-      
-      <section class="settings-section">
-        <h3 class="section-title">О приложении</h3>
-        
-        <div class="about-info">
+
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">О приложении</h3>
+
+        <div :class="$style.aboutInfo">
           <p><strong>Ежедневник</strong> v0.1.0</p>
           <p>Приложение для ведения личных записей</p>
-          <p class="copyright">© 2026</p>
+          <p :class="$style.copyright">© 2026</p>
         </div>
       </section>
     </div>
@@ -234,6 +269,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore, useDiaryStore } from '@/stores'
+import type { DiaryEntry } from '@/types'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
@@ -247,6 +283,11 @@ const testStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
 const testMessage = ref('')
 const getChatIdLoading = ref(false)
 let notificationInterval: ReturnType<typeof setInterval> | null = null
+let telegramPollingInterval: ReturnType<typeof setInterval> | null = null
+
+const getChatIdInstructions = computed(() => 
+  '1. Создайте бота в @BotFather<br>2. Напишите боту любое сообщение (например, /start)<br>3. Нажмите кнопку 🔍 справа от поля Chat ID<br>4. Chat ID будет получен автоматически'
+)
 
 function setTheme(theme: 'light' | 'dark' | 'mononoke'): void {
   settingsStore.updateSettings({ theme })
@@ -392,7 +433,25 @@ function toggleBackup(event: Event): void {
 async function toggleMinimizeOnClose(event: Event): Promise<void> {
   const enabled = (event.target as HTMLInputElement).checked
   settingsStore.updateSettings({ minimizeOnClose: enabled })
-  await invoke('set_minimize_on_close', { minimizeOnClose: enabled })
+  try {
+    await invoke('set_minimize_on_close', { minimizeOnClose: enabled })
+  } catch (error) {
+    console.error('Ошибка при установке minimizeOnClose:', error)
+  }
+}
+
+async function toggleCreateFromTelegram(event: Event): Promise<void> {
+  const enabled = (event.target as HTMLInputElement).checked
+  settingsStore.updateTelegramSettings({ createFromTelegram: enabled })
+  if (enabled) {
+    // Запускаем polling при включении
+    startTelegramPolling()
+  }
+}
+
+async function toggleSaveVoice(event: Event): Promise<void> {
+  const enabled = (event.target as HTMLInputElement).checked
+  settingsStore.updateTelegramSettings({ saveVoice: enabled })
 }
 
 async function exportData(): Promise<void> {
@@ -452,226 +511,139 @@ async function importData(): Promise<void> {
 onMounted(async () => {
   notificationInterval = setInterval(checkScheduledNotifications, 1000)
   // Отправляем текущее значение настройки minimizeOnClose в Tauri
-  await invoke('set_minimize_on_close', { minimizeOnClose: settingsStore.settings.minimizeOnClose })
+  try {
+    await invoke('set_minimize_on_close', { minimizeOnClose: settingsStore.settings.minimizeOnClose })
+  } catch (error) {
+    console.error('Ошибка при установке minimizeOnClose в onMounted:', error)
+  }
+  
+  // Запускаем polling если включено
+  if (settingsStore.settings.telegram.createFromTelegram) {
+    startTelegramPolling()
+  }
 })
 
 onUnmounted(() => {
   if (notificationInterval) {
     clearInterval(notificationInterval)
   }
+  if (telegramPollingInterval) {
+    clearInterval(telegramPollingInterval)
+  }
 })
+
+// Polling Telegram для новых сообщений
+async function startTelegramPolling(): Promise<void> {
+  if (telegramPollingInterval) {
+    clearInterval(telegramPollingInterval)
+  }
+
+  telegramPollingInterval = setInterval(async () => {
+    const settings = settingsStore.settings
+    if (!settings.telegram.enabled || !settings.telegram.botToken) return
+
+    try {
+      const updates = await invoke<TelegramUpdate[]>('get_telegram_updates', {
+        botToken: settings.telegram.botToken,
+        offset: (settings.telegram.lastUpdateId || 0) + 1,
+      })
+
+      let maxUpdateId = settings.telegram.lastUpdateId || 0
+
+      for (const update of updates) {
+        if (update.message) {
+          // Обработка текстовых сообщений с командой /note
+          if (update.message.text) {
+            const text = update.message.text.trim()
+
+            // Проверяем команду /note
+            if (text.startsWith('/note')) {
+              const content = text.substring(5).trim() // Всё после /note
+
+              if (content) {
+                // Создаем запись из сообщения
+                const now = new Date().toISOString()
+                const today = now.split('T')[0]
+
+                const newEntry: DiaryEntry = {
+                  id: crypto.randomUUID(),
+                  date: today,
+                  title: content.length > 50 ? content.substring(0, 50) + '...' : content,
+                  content: content,
+                  categoryId: undefined,
+                  tags: ['telegram'],
+                  priority: 'medium',
+                  createdAt: now,
+                  updatedAt: now,
+                }
+
+                diaryStore.addEntry(newEntry)
+              }
+            }
+          }
+
+          // Обработка голосовых сообщений
+          if (settings.telegram.saveVoice && update.message.voice) {
+            const voice = update.message.voice
+            const now = new Date().toISOString()
+            const today = now.split('T')[0]
+            const entryId = crypto.randomUUID()
+
+            try {
+              // Сохраняем голосовое сообщение
+              const audioPath = await invoke<string>('save_telegram_voice', {
+                botToken: settings.telegram.botToken,
+                fileId: voice.file_id,
+                entryId: entryId,
+              })
+
+              // Создаем запись с аудио
+              const newEntry: DiaryEntry = {
+                id: entryId,
+                date: today,
+                title: `Голосовое от ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
+                content: '',
+                categoryId: undefined,
+                tags: ['telegram', 'voice'],
+                priority: 'medium',
+                createdAt: now,
+                updatedAt: now,
+                audioPath: audioPath,
+              }
+
+              diaryStore.addEntry(newEntry)
+            } catch (error) {
+              console.error('Ошибка сохранения голосового:', error)
+            }
+          }
+
+          // Обновляем maxUpdateId для всех сообщений
+          if (update.update_id > maxUpdateId) {
+            maxUpdateId = update.update_id
+          }
+        }
+      }
+
+      // Обновляем lastUpdateId один раз после обработки всех сообщений
+      if (maxUpdateId !== settings.telegram.lastUpdateId) {
+        settingsStore.updateTelegramSettings({ lastUpdateId: maxUpdateId })
+      }
+    } catch (error) {
+      console.error('Ошибка polling Telegram:', error)
+    }
+  }, 3000) // Проверка каждые 3 секунды
+}
+
+interface TelegramUpdate {
+  update_id: number
+  message?: {
+    text?: string
+    voice?: {
+      file_id: string
+      duration?: number
+    }
+  }
+}
 </script>
 
-<style lang="scss">
-.settings-view {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.view-header {
-  padding: 0 10px;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.view-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: var(--color-text);
-  padding-left: 12px;
-}
-
-.settings-content {
-  flex: 1;
-  padding: 8px 12px 8px 8px;
-  overflow: auto;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.settings-section {
-  background-color: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  margin-bottom: 8px;
-  box-shadow: var(--shadow-sm);
-}
-
-.section-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: var(--color-text);
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  
-  &:not(:last-child) {
-    border-bottom: 1px solid var(--color-border);
-  }
-}
-
-.setting-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.setting-label {
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.setting-description {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.setting-control {
-  display: flex;
-  gap: 12px;
-}
-
-.theme-btn {
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  
-  &:hover {
-    background-color: var(--color-border);
-  }
-  
-  &.active {
-    background-color: var(--color-primary);
-    color: white;
-  }
-}
-
-.btn {
-  width: 160px;
-  height: 60px;
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  font-weight: 500;
-  background-color: var(--color-primary);
-  color: white;
-
-  &:hover {
-    background-color: var(--color-primary-hover);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.btn-secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-
-  &:hover:not(:disabled) {
-    background-color: var(--color-border);
-  }
-}
-
-.btn-icon {
-  padding: 10px 16px;
-  font-size: 1.25rem;
-}
-
-.input-field {
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  min-width: 250px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--color-primary);
-  }
-
-  &::placeholder {
-    color: var(--color-text-secondary);
-  }
-
-  &.time-input {
-    min-width: 150px;
-    cursor: pointer;
-  }
-}
-
-.toggle {
-  position: relative;
-  display: inline-block;
-  width: 52px;
-  height: 28px;
-  
-  input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-    
-    &:checked + .toggle-slider {
-      background-color: var(--color-primary);
-    }
-    
-    &:checked + .toggle-slider:before {
-      transform: translateX(24px);
-    }
-  }
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--color-border);
-  transition: var(--transition-fast);
-  border-radius: 28px;
-  
-  &:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: var(--transition-fast);
-    border-radius: 50%;
-  }
-}
-
-.about-info {
-  color: var(--color-text-secondary);
-  line-height: 1.8;
-  
-  p {
-    margin: 0;
-  }
-  
-  .copyright {
-    margin-top: 16px;
-    font-size: 0.9rem;
-  }
-}
-</style>
+<style lang="scss" module src="./SettingsView.module.scss"></style>

@@ -218,6 +218,9 @@ export const useSettingsStore = defineStore('settings', () => {
       chatId: '',
       enabled: false,
       notifyTime: '08:00',
+      createFromTelegram: false,
+      saveVoice: false,
+      lastUpdateId: 0,
     },
   })
 
