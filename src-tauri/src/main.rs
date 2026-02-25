@@ -2,13 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use std::fs;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
-use std::path::PathBuf;
-use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TelegramMessage {
@@ -215,29 +214,92 @@ fn save_telegram_voice(
     bot_token: String,
     file_id: String,
     entry_id: String,
+    app: tauri::AppHandle,
 ) -> Result<String, String> {
     use std::io::Write;
-    
+
     // Скачиваем файл (OGG формат)
     let audio_data = get_telegram_file(bot_token, file_id)?;
-    
-    // Определяем директорию для хранения
-    let app_data_dir = dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("daily-diary")
+
+    // Определяем директорию для хранения в пределах app's data directory
+    let app_data_dir = app
+        .path()
+        .data_dir()
+        .map_err(|e| format!("Ошибка получения data_dir: {}", e))?
         .join("voices");
-    
+
     fs::create_dir_all(&app_data_dir)
         .map_err(|e| format!("Ошибка создания директории: {}", e))?;
-    
+
     // Сохраняем файл в OGG формате
     let file_path = app_data_dir.join(format!("{}.ogg", entry_id));
     let mut file = fs::File::create(&file_path)
         .map_err(|e| format!("Ошибка создания файла: {}", e))?;
     file.write_all(&audio_data)
         .map_err(|e| format!("Ошибка записи файла: {}", e))?;
-    
+
+    // Возвращаем обычный путь к файлу
     Ok(file_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn send_telegram_file(
+    bot_token: String,
+    chat_id: String,
+    content: String,
+    file_name: String,
+) -> Result<bool, String> {
+    // Используем метод sendDocument для отправки файла
+    let url = format!("https://api.telegram.org/bot{}/sendDocument", bot_token);
+
+    // Создаем multipart форму вручную
+    let boundary = "------------------------"
+        .to_string()
+        .chars()
+        .chain(std::iter::repeat(()).take(24).map(|_| {
+            "0123456789abcdef"
+                .chars()
+                .nth(rand::random::<usize>() % 16)
+                .unwrap()
+        }))
+        .collect::<String>();
+
+    let mut body = Vec::new();
+
+    // Добавляем chat_id
+    let chat_id_part = format!(
+        "--{}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{}\r\n",
+        boundary, chat_id
+    );
+    body.extend_from_slice(chat_id_part.as_bytes());
+
+    // Добавляем файл
+    let file_part = format!(
+        "--{}\r\nContent-Disposition: form-data; name=\"document\"; filename=\"{}\"\r\nContent-Type: application/json\r\n\r\n",
+        boundary, file_name
+    );
+    body.extend_from_slice(file_part.as_bytes());
+    body.extend_from_slice(content.as_bytes());
+    body.extend_from_slice(b"\r\n");
+
+    // Добавляем завершающий boundary
+    let end_part = format!("--{}--\r\n", boundary);
+    body.extend_from_slice(end_part.as_bytes());
+
+    let response = ureq::post(&url)
+        .set("Content-Type", &format!("multipart/form-data; boundary={}", boundary))
+        .send_bytes(&body)
+        .map_err(|e| format!("Ошибка отправки: {}", e))?;
+
+    let result: TelegramResponse = response
+        .into_json()
+        .map_err(|e| format!("Ошибка парсинга ответа: {}", e))?;
+
+    if result.ok {
+        Ok(true)
+    } else {
+        Err(result.description.unwrap_or_else(|| "Неизвестная ошибка".to_string()))
+    }
 }
 
 fn main() {
@@ -253,6 +315,7 @@ fn main() {
             get_telegram_updates,
             get_telegram_file,
             save_telegram_voice,
+            send_telegram_file,
         ])
         .manage(Arc::new(Mutex::new(AppState::default())));
 

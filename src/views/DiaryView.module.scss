@@ -22,7 +22,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   gap: 16px;
 }
 
@@ -36,7 +36,7 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .searchBox {
@@ -115,11 +115,7 @@
 .filtersBar {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 16px;
-  background-color: var(--color-bg);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  gap: 8px;
 }
 
 .filterGroup {
@@ -153,7 +149,7 @@
 
 .filterButtons {
   display: flex;
-  gap: 4px;
+  gap: 0px;
 }
 
 .filterBtn {
@@ -239,7 +235,7 @@
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: box-shadow var(--transition-fast), transform var(--transition-fast);
-  border-left: 4px solid transparent;
+  border: 1px solid transparent;
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -255,17 +251,20 @@
     }
   }
 
-  // Приоритеты - цветовая индикация
+  // Приоритеты - фоновый цвет карточки
   &.priorityHigh {
-    border-left-color: #e74c3c;
+    background-color: var(--color-priority-high);
+    border-color: var(--color-priority-high-border);
   }
 
   &.priorityMedium {
-    border-left-color: #f39c12;
+    background-color: var(--color-priority-medium);
+    border-color: var(--color-priority-medium-border);
   }
 
   &.priorityLow {
-    border-left-color: #27ae60;
+    background-color: var(--color-priority-low);
+    border-color: var(--color-priority-low-border);
   }
 }
 
@@ -375,13 +374,6 @@
   padding: 4px 10px;
   border-radius: var(--radius-sm);
   font-weight: 500;
-}
-
-.entryPriority {
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
 }
 
 .entryTime {

@@ -6,7 +6,7 @@
         <div :class="$style.actionsRow">
           <div :class="$style.headerActions">
             <button :class="[$style.btn, $style.btnSecondary]" @click="refreshEntries" title="Обновить записи из Telegram">
-              🔄 Обновить
+              Синхронизация
             </button>
             <div :class="$style.searchBox">
               <input
@@ -25,7 +25,6 @@
         <!-- Расширенные фильтры -->
         <div :class="$style.filtersBar">
           <div :class="$style.filterGroup">
-            <label :class="$style.filterLabel">Категория:</label>
             <select v-model="filterCategory" :class="$style.filterSelect">
               <option value="">Все категории</option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">
@@ -35,7 +34,14 @@
           </div>
 
           <div :class="$style.filterGroup">
-            <label :class="$style.filterLabel">Статус:</label>
+            <select v-model="sortBy" :class="$style.filterSelect">
+              <option value="createdAt">По времени создания</option>
+              <option value="priority">По приоритету</option>
+              <option value="title">По названию</option>
+            </select>
+          </div>
+
+          <div :class="$style.filterGroup">
             <div :class="$style.filterButtons">
               <button
                 :class="[$style.filterBtn, { [$style.active]: filterStatus === 'all' }]"
@@ -59,7 +65,6 @@
           </div>
 
           <div :class="$style.filterGroup">
-            <label :class="$style.filterLabel">Приоритет:</label>
             <div :class="$style.filterButtons">
               <button
                 :class="[$style.filterBtn, $style.priorityAll, { [$style.active]: filterPriority === 'all' }]"
@@ -71,30 +76,21 @@
                 :class="[$style.filterBtn, $style.priorityHigh, { [$style.active]: filterPriority === 'high' }]"
                 @click="filterPriority = 'high'"
               >
-                🔴 Высокий
+                Высокий
               </button>
               <button
                 :class="[$style.filterBtn, $style.priorityMedium, { [$style.active]: filterPriority === 'medium' }]"
                 @click="filterPriority = 'medium'"
               >
-                🟡 Средний
+                Средний
               </button>
               <button
                 :class="[$style.filterBtn, $style.priorityLow, { [$style.active]: filterPriority === 'low' }]"
                 @click="filterPriority = 'low'"
               >
-                🟢 Низкий
+                Низкий
               </button>
             </div>
-          </div>
-
-          <div :class="$style.filterGroup">
-            <label :class="$style.filterLabel">Сортировка:</label>
-            <select v-model="sortBy" :class="$style.filterSelect">
-              <option value="createdAt">По времени создания</option>
-              <option value="priority">По приоритету</option>
-              <option value="title">По названию</option>
-            </select>
           </div>
         </div>
       </div>
@@ -149,9 +145,6 @@
             <div :class="$style.entryMeta">
               <span v-if="entry.categoryId" :class="$style.entryCategory">
                 {{ getCategoryName(entry.categoryId) }}
-              </span>
-              <span :class="$style.entryPriority">
-                {{ getPriorityLabel(entry.priority) }}
               </span>
               <span :class="$style.entryTime">{{ formatTime(entry.createdAt) }}</span>
             </div>
@@ -372,15 +365,6 @@ function capitalize(str: string): string {
 function getCategoryName(id: string): string {
   const category = categoriesStore.categories.find(c => c.id === id)
   return category?.name || ''
-}
-
-function getPriorityLabel(priority?: Priority): string {
-  switch (priority) {
-    case 'high': return '🔴 Высокий'
-    case 'medium': return '🟡 Средний'
-    case 'low': return '🟢 Низкий'
-    default: return ''
-  }
 }
 
 function formatTime(isoString: string): string {

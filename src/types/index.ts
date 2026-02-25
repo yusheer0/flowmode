@@ -1,5 +1,9 @@
 export type Priority = 'high' | 'medium' | 'low'
 
+export type MoodLevel = 1 | 2 | 3 | 4 | 5
+
+export type HabitFrequency = 'daily' | 'weekly' | 'custom'
+
 export interface DiaryEntry {
   id: string
   date: string
@@ -27,6 +31,26 @@ export interface Tag {
   color: string
 }
 
+export interface Habit {
+  id: string
+  name: string
+  icon: string
+  color: string
+  frequency: HabitFrequency
+  targetDays?: number[]  // [0, 1, 2, 3, 4, 5, 6] - дни недели (0 = воскресенье)
+  createdAt: string
+  completedDates: string[]  // Даты выполнения в формате YYYY-MM-DD
+}
+
+export interface MoodEntry {
+  id: string
+  date: string
+  mood: MoodLevel
+  note?: string
+  activities: string[]
+  createdAt: string
+}
+
 export interface TelegramSettings {
   botToken: string
   chatId: string
@@ -44,4 +68,15 @@ export interface AppSettings {
   backupEnabled: boolean
   minimizeOnClose: boolean
   telegram: TelegramSettings
+}
+
+export interface ExportData {
+  version: string
+  exportedAt: string
+  entries: DiaryEntry[]
+  categories: Category[]
+  tags: Tag[]
+  habits: Habit[]
+  moodEntries: MoodEntry[]
+  settings: AppSettings
 }

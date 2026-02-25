@@ -1,6 +1,7 @@
 <template>
   <div :class="$style.settingsView">
     <div :class="$style.settingsContent">
+      <!-- Внешний вид -->
       <section :class="$style.settingsSection">
         <h3 :class="$style.sectionTitle">Внешний вид</h3>
 
@@ -32,29 +33,9 @@
         </div>
       </section>
 
+      <!-- Telegram (все настройки в одном блоке) -->
       <section :class="$style.settingsSection">
-        <h3 :class="$style.sectionTitle">Уведомления</h3>
-
-        <div :class="$style.settingItem">
-          <div :class="$style.settingInfo">
-            <span :class="$style.settingLabel">Напоминания</span>
-            <span :class="$style.settingDescription">Получать уведомления о записях</span>
-          </div>
-          <div :class="$style.settingControl">
-            <label :class="$style.toggle">
-              <input
-                type="checkbox"
-                :checked="settings.notificationsEnabled"
-                @change="toggleNotifications"
-              />
-              <span :class="$style.toggleSlider"></span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <section :class="$style.settingsSection">
-        <h3 :class="$style.sectionTitle">Telegram уведомления</h3>
+        <h3 :class="$style.sectionTitle">Telegram</h3>
 
         <div :class="$style.settingItem">
           <div :class="$style.settingInfo">
@@ -146,44 +127,8 @@
             <span :class="$style.settingDescription" v-html="getChatIdInstructions"></span>
           </div>
         </div>
-      </section>
 
-      <section :class="$style.settingsSection">
-        <h3 :class="$style.sectionTitle">Данные</h3>
-
-        <div :class="$style.settingItem">
-          <div :class="$style.settingInfo">
-            <span :class="$style.settingLabel">Резервное копирование</span>
-            <span :class="$style.settingDescription">Автоматическое создание резервных копий</span>
-          </div>
-          <div :class="$style.settingControl">
-            <label :class="$style.toggle">
-              <input
-                type="checkbox"
-                :checked="settings.backupEnabled"
-                @change="toggleBackup"
-              />
-              <span :class="$style.toggleSlider"></span>
-            </label>
-          </div>
-        </div>
-
-        <div :class="$style.settingItem">
-          <div :class="$style.settingInfo">
-            <span :class="$style.settingLabel">Сворачивать при закрытии</span>
-            <span :class="$style.settingDescription">Приложение будет сворачиваться в трей вместо закрытия</span>
-          </div>
-          <div :class="$style.settingControl">
-            <label :class="$style.toggle">
-              <input
-                type="checkbox"
-                :checked="settings.minimizeOnClose"
-                @change="toggleMinimizeOnClose"
-              />
-              <span :class="$style.toggleSlider"></span>
-            </label>
-          </div>
-        </div>
+        <div :class="$style.settingsDivider"></div>
 
         <div :class="$style.settingItem">
           <div :class="$style.settingInfo">
@@ -231,21 +176,96 @@
             </span>
           </div>
         </div>
+      </section>
+
+      <!-- Уведомления -->
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Уведомления</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Напоминания</span>
+            <span :class="$style.settingDescription">Получать уведомления о записях</span>
+          </div>
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
+              <input
+                type="checkbox"
+                :checked="settings.notificationsEnabled"
+                @change="toggleNotifications"
+              />
+              <span :class="$style.toggleSlider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Данные -->
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Данные</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Резервное копирование</span>
+            <span :class="$style.settingDescription">Автоматическое создание резервных копий</span>
+          </div>
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
+              <input
+                type="checkbox"
+                :checked="settings.backupEnabled"
+                @change="toggleBackup"
+              />
+              <span :class="$style.toggleSlider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Сворачивать при закрытии</span>
+            <span :class="$style.settingDescription">Приложение будет сворачиваться в трей вместо закрытия</span>
+          </div>
+          <div :class="$style.settingControl">
+            <label :class="$style.toggle">
+              <input
+                type="checkbox"
+                :checked="settings.minimizeOnClose"
+                @change="toggleMinimizeOnClose"
+              />
+              <span :class="$style.toggleSlider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div :class="$style.settingsDivider"></div>
 
         <div :class="$style.settingItem">
           <div :class="$style.settingInfo">
             <span :class="$style.settingLabel">Экспорт данных</span>
-            <span :class="$style.settingDescription">Сохранить все записи в JSON файл</span>
+            <span :class="$style.settingDescription">Сохранить все данные в JSON файл</span>
           </div>
           <div :class="$style.settingControl">
-            <button :class="$style.btn" @click="exportData">Экспорт</button>
+            <button :class="$style.btn" @click="exportData">Экспорт в файл</button>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Экспорт в Telegram</span>
+            <span :class="$style.settingDescription">Отправить резервную копию в личные сообщения Telegram</span>
+          </div>
+          <div :class="$style.settingControl">
+            <button :class="$style.btn" @click="exportToTelegram" :disabled="!settingsStore.settings.telegram.enabled">
+              Отправить в Telegram
+            </button>
           </div>
         </div>
 
         <div :class="$style.settingItem">
           <div :class="$style.settingInfo">
             <span :class="$style.settingLabel">Импорт данных</span>
-            <span :class="$style.settingDescription">Загрузить записи из JSON файла</span>
+            <span :class="$style.settingDescription">Загрузить данные из JSON файла</span>
           </div>
           <div :class="$style.settingControl">
             <button :class="$style.btn" @click="importData">Импорт</button>
@@ -253,11 +273,12 @@
         </div>
       </section>
 
+      <!-- О приложении -->
       <section :class="$style.settingsSection">
         <h3 :class="$style.sectionTitle">О приложении</h3>
 
         <div :class="$style.aboutInfo">
-          <p><strong>Ежедневник</strong> v0.1.0</p>
+          <p><strong>Ежедневник</strong> v{{ appVersion }}</p>
           <p>Приложение для ведения личных записей</p>
           <p :class="$style.copyright">© 2026</p>
         </div>
@@ -268,12 +289,13 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useSettingsStore, useDiaryStore } from '@/stores'
-import type { DiaryEntry } from '@/types'
+import { useSettingsStore, useDiaryStore, exportAllData, importAllData } from '@/stores'
+import type { DiaryEntry, ExportData } from '@/types'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { sendNotification } from '@tauri-apps/plugin-notification'
+import { getVersion } from '@tauri-apps/api/app'
 
 const settingsStore = useSettingsStore()
 const diaryStore = useDiaryStore()
@@ -282,6 +304,7 @@ const settings = computed(() => settingsStore.settings)
 const testStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
 const testMessage = ref('')
 const getChatIdLoading = ref(false)
+const appVersion = ref('0.1.0')
 let notificationInterval: ReturnType<typeof setInterval> | null = null
 let telegramPollingInterval: ReturnType<typeof setInterval> | null = null
 
@@ -444,7 +467,6 @@ async function toggleCreateFromTelegram(event: Event): Promise<void> {
   const enabled = (event.target as HTMLInputElement).checked
   settingsStore.updateTelegramSettings({ createFromTelegram: enabled })
   if (enabled) {
-    // Запускаем polling при включении
     startTelegramPolling()
   }
 }
@@ -456,19 +478,21 @@ async function toggleSaveVoice(event: Event): Promise<void> {
 
 async function exportData(): Promise<void> {
   try {
-    const data = JSON.stringify(diaryStore.entries, null, 2)
-    
+    const data = exportAllData()
+    const jsonString = JSON.stringify(data, null, 2)
+
+    const fileName = `flowmode-backup-${new Date().toISOString().split('T')[0]}.json`
     const filePath = await save({
-      title: 'Экспорт записей',
-      defaultPath: 'daily-diary-backup.json',
+      title: 'Экспорт данных',
+      defaultPath: fileName,
       filters: [{
         name: 'JSON',
         extensions: ['json'],
       }],
     })
-    
+
     if (filePath) {
-      await writeTextFile(filePath, data)
+      await writeTextFile(filePath, jsonString)
       alert('Данные успешно экспортированы!')
     }
   } catch (error) {
@@ -480,7 +504,7 @@ async function exportData(): Promise<void> {
 async function importData(): Promise<void> {
   try {
     const filePath = await open({
-      title: 'Импорт записей',
+      title: 'Импорт данных',
       multiple: false,
       filters: [{
         name: 'JSON',
@@ -490,25 +514,67 @@ async function importData(): Promise<void> {
 
     if (filePath) {
       const content = await readTextFile(filePath)
-      const entries = JSON.parse(content)
+      const data = JSON.parse(content) as ExportData
 
-      if (confirm(`Загрузить ${entries.length} записей? Текущие записи будут дополнены.`)) {
-        for (const entry of entries) {
-          const exists = diaryStore.entries.find((e: any) => e.id === entry.id)
-          if (!exists) {
-            diaryStore.addEntry(entry)
-          }
-        }
+      const entriesCount = data.entries?.length || 0
+      const habitsCount = data.habits?.length || 0
+      const moodCount = data.moodEntries?.length || 0
+
+      const confirmMsg = `Загрузить данные из файла?\n\n` +
+        `Записи: ${entriesCount}\n` +
+        `Привычки: ${habitsCount}\n` +
+        `Настроение: ${moodCount}\n\n` +
+        `Внимание: Текущие данные будут заменены!`
+
+      if (confirm(confirmMsg)) {
+        importAllData(data)
         alert('Данные успешно импортированы!')
+        window.location.reload()
       }
     }
   } catch (error) {
     console.error('Ошибка импорта:', error)
-    alert('Ошибка при импорте данных')
+    alert('Ошибка при импорте данных: ' + (error instanceof Error ? error.message : error))
+  }
+}
+
+async function exportToTelegram(): Promise<void> {
+  if (!settingsStore.settings.telegram.enabled || !settingsStore.settings.telegram.botToken || !settingsStore.settings.telegram.chatId) {
+    alert('Сначала настройте Telegram в настройках приложения')
+    return
+  }
+
+  try {
+    const data = exportAllData()
+    const jsonString = JSON.stringify(data, null, 2)
+    const fileName = `flowmode-backup-${new Date().toISOString().split('T')[0]}.json`
+
+    // Отправляем файл в Telegram
+    const success = await invoke<boolean>('send_telegram_file', {
+      botToken: settingsStore.settings.telegram.botToken,
+      chatId: settingsStore.settings.telegram.chatId,
+      content: jsonString,
+      fileName: fileName,
+    })
+
+    if (success) {
+      alert('Резервная копия отправлена в Telegram!')
+    } else {
+      alert('Ошибка при отправке файла')
+    }
+  } catch (error) {
+    console.error('Ошибка экспорта в Telegram:', error)
+    alert('Ошибка при экспорте в Telegram: ' + (error instanceof Error ? error.message : error))
   }
 }
 
 onMounted(async () => {
+  try {
+    appVersion.value = await getVersion()
+  } catch {
+    appVersion.value = '0.1.0'
+  }
+
   notificationInterval = setInterval(checkScheduledNotifications, 1000)
   // Отправляем текущее значение настройки minimizeOnClose в Tauri
   try {
@@ -516,7 +582,7 @@ onMounted(async () => {
   } catch (error) {
     console.error('Ошибка при установке minimizeOnClose в onMounted:', error)
   }
-  
+
   // Запускаем polling если включено
   if (settingsStore.settings.telegram.createFromTelegram || settingsStore.settings.telegram.saveVoice) {
     startTelegramPolling()

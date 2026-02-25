@@ -6,7 +6,7 @@
 
 .statisticsContent {
   flex: 1;
-  padding: 8px;
+  padding: 16px;
   overflow: auto;
   background-color: var(--color-bg);
 }
@@ -29,7 +29,7 @@
 .statCard {
   background-color: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 64px 0px;
   text-align: center;
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
@@ -45,14 +45,14 @@
 }
 
 .statValue {
-  font-size: 2rem;
+  font-size: 3rem;
   font-weight: 700;
   color: var(--color-primary);
   margin-bottom: 4px;
 }
 
 .statLabel {
-  font-size: 0.875rem;
+  font-size: 1.2rem;
   color: var(--color-text-secondary);
 }
 
@@ -79,7 +79,7 @@
 
 .progressBar {
   flex: 1;
-  height: 24px;
+  height: 12px;
   background-color: var(--color-bg);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -98,14 +98,6 @@
   &.mediumProgress {
     background: linear-gradient(90deg, #f39c12, #e67e22);
   }
-}
-
-.progressText {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-  min-width: 50px;
-  text-align: right;
 }
 
 .statsSection {

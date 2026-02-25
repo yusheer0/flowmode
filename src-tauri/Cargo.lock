@@ -602,6 +602,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "dirs",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "tauri",

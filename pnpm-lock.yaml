@@ -17,6 +17,9 @@ importers:
       '@tauri-apps/plugin-notification':
         specifier: ^2.0.0
         version: 2.3.3
+      material-symbols:
+        specifier: ^0.40.2
+        version: 0.40.2
       pinia:
         specifier: ^3.0.0
         version: 3.0.4(typescript@5.6.3)(vue@3.5.28(typescript@5.6.3))
@@ -701,6 +704,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  material-symbols@0.40.2:
+    resolution: {integrity: sha512-QUJF1HztvcpP8pXHPPNESK05Thq/Zy8ub17T2xBDf4+gqx4KBs353lKHuVzE/eCYOtiB9JBlFOU7cjAI6vVMTQ==}
+
   minimatch@9.0.6:
     resolution: {integrity: sha512-kQAVowdR33euIqeA0+VZTDqU+qo1IeVY+hrKYtZMio3Pg0P0vuh/kwRylLUddJhB6pf3q/botcOvRtx4IN1wqQ==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -1339,6 +1345,8 @@ snapshots:
   magic-string@0.30.21:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  material-symbols@0.40.2: {}
 
   minimatch@9.0.6:
     dependencies:

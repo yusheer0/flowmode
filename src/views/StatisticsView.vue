@@ -5,7 +5,7 @@
       <div :class="$style.statsCards">
         <div :class="$style.statCard">
           <div :class="$style.statValue">{{ totalEntries }}</div>
-          <div :class="$style.statLabel">Всего записей</div>
+          <div :class="$style.statLabel">Записей</div>
         </div>
 
         <div :class="$style.statCard">
@@ -26,7 +26,7 @@
 
       <!-- Прогресс выполнения -->
       <div :class="$style.progressSection">
-        <h3 :class="$style.sectionTitle">Общий прогресс</h3>
+        <h3 :class="$style.sectionTitle">Прогресс</h3>
         <div :class="$style.progressContainer">
           <div :class="$style.progressBar">
             <div
@@ -38,7 +38,6 @@
               :style="{ width: `${completionRate}%` }"
             ></div>
           </div>
-          <div :class="$style.progressText">{{ completionRate }}%</div>
         </div>
       </div>
 

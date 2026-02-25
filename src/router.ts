@@ -23,6 +23,16 @@ const router = createRouter({
           name: 'calendar',
         },
         {
+          path: 'habits',
+          component: () => import('@/views/HabitTrackerView.vue'),
+          name: 'habits',
+        },
+        {
+          path: 'mood',
+          component: () => import('@/views/MoodTrackerView.vue'),
+          name: 'mood',
+        },
+        {
           path: 'statistics',
           component: () => import('@/views/StatisticsView.vue'),
           name: 'statistics',

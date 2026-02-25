@@ -10,6 +10,13 @@
   --color-success: #27ae60;
   --color-warning: #f39c12;
 
+  --color-priority-high: #fde8e6;
+  --color-priority-high-border: #e74c3c;
+  --color-priority-medium: #fef5e6;
+  --color-priority-medium-border: #f39c12;
+  --color-priority-low: #e6f5ed;
+  --color-priority-low-border: #27ae60;
+
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
@@ -18,7 +25,7 @@
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  --sidebar-width: 260px;
+  --sidebar-width: 200px;
   --header-height: 60px;
 
   --transition-fast: 0.15s ease;
@@ -26,24 +33,39 @@
 }
 
 [data-theme="dark"] {
-  --color-primary: #5a9fe9;
-  --color-primary-hover: #4a8fd9;
-  --color-bg: #000000;
-  --color-surface: #0a0a0a;
-  --color-text: #eaeaea;
-  --color-text-secondary: #a0a0a0;
-  --color-border: #333333;
+  --color-primary: #6db3f2;
+  --color-primary-hover: #5a9fe9;
+  --color-bg: #1a1d24;
+  --color-surface: #242832;
+  --color-text: #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-border: #3c4048;
+  --color-danger: #f06c64;
+  --color-success: #52c48a;
+  --color-warning: #f5b847;
+  --color-priority-high: #3d2525;
+  --color-priority-high-border: #f06c64;
+  --color-priority-medium: #3d3220;
+  --color-priority-medium-border: #f5b847;
+  --color-priority-low: #1f3a2e;
+  --color-priority-low-border: #52c48a;
 }
 
 [data-theme="mononoke"] {
-  --color-primary: #ac312d;
-  --color-primary-hover: #A63230;
-  --color-bg: #bcafa5;
-  --color-surface: #dad0c8;
-  --color-text: #000000;
-  --color-text-secondary: #5C4033;
-  --color-border: #1a1a1a;
-  --color-success: #27ae60;
-  --color-danger: #C73E3A;
-  --color-warning: #B8860B;
+  --color-primary: #c44d46;
+  --color-primary-hover: #b5403b;
+  --color-bg: #c9b8a8;
+  --color-surface: #dcd0c4;
+  --color-text: #2b2623;
+  --color-text-secondary: #6b5d52;
+  --color-border: #a89686;
+  --color-danger: #c95046;
+  --color-success: #4a8c6a;
+  --color-warning: #b8860b;
+  --color-priority-high: #e8d4d2;
+  --color-priority-high-border: #c95046;
+  --color-priority-medium: #f0e4c8;
+  --color-priority-medium-border: #b8860b;
+  --color-priority-low: #d4e8dc;
+  --color-priority-low-border: #4a8c6a;
 }
