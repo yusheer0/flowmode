@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-const appVersion = '0.1.0'
+const appVersion = '0.2.0'
 const currentYear = new Date().getFullYear()
 </script>
 
