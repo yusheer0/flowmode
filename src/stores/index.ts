@@ -132,6 +132,28 @@ export const useDiaryStore = defineStore('diary', () => {
     return streak
   }
 
+  // Задачи на сегодня
+  function getTasksForToday(): DiaryEntry[] {
+    const today = new Date().toISOString().split('T')[0]
+    return entries.value.filter(entry => entry.date === today)
+  }
+
+  // Задачи на вчера
+  function getTasksForYesterday(): DiaryEntry[] {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    return entries.value.filter(entry => entry.date === yesterdayStr)
+  }
+
+  // Задачи на завтра
+  function getTasksForTomorrow(): DiaryEntry[] {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    return entries.value.filter(entry => entry.date === tomorrowStr)
+  }
+
   return {
     entries,
     selectedDate,
@@ -148,6 +170,9 @@ export const useDiaryStore = defineStore('diary', () => {
     getEntriesByCategory,
     getMonthlyStats,
     getStreak,
+    getTasksForToday,
+    getTasksForYesterday,
+    getTasksForTomorrow,
   }
 })
 

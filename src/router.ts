@@ -10,12 +10,17 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/diary',
+          redirect: '/overview',
         },
         {
-          path: 'diary',
-          component: () => import('@/views/DiaryView.vue'),
-          name: 'diary',
+          path: 'overview',
+          component: () => import('@/views/OverviewView.vue'),
+          name: 'overview',
+        },
+        {
+          path: 'list',
+          component: () => import('@/views/ListView.vue'),
+          name: 'list',
         },
         {
           path: 'calendar',
@@ -33,14 +38,14 @@ const router = createRouter({
           name: 'mood',
         },
         {
-          path: 'statistics',
-          component: () => import('@/views/StatisticsView.vue'),
-          name: 'statistics',
-        },
-        {
           path: 'settings',
           component: () => import('@/views/SettingsView.vue'),
           name: 'settings',
+        },
+        {
+          path: 'about',
+          component: () => import('@/views/AboutView.vue'),
+          name: 'about',
         },
       ],
     },

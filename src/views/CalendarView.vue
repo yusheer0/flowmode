@@ -4,13 +4,17 @@
       <!-- Заголовок и навигация -->
       <div :class="$style.calendarHeader">
         <div :class="$style.headerActions">
-          <button :class="$style.btnIcon" @click="previousMonth">‹</button>
-          <span :class="$style.currentMonth">{{ formatMonth(currentDate) }}</span>
-          <button :class="$style.btnIcon" @click="nextMonth">›</button>
-          <button :class="$style.btn" @click="goToToday">Сегодня</button>
-          <button :class="[$style.btn, $style.btnPrimary]" @click="openEntryModal">
-            Новая запись
-          </button>
+          <div :class="$style.calendarDate">
+            <button :class="$style.btnIcon" @click="previousMonth">‹</button>
+            <span :class="$style.currentMonth">{{ formatMonth(currentDate) }}</span>
+            <button :class="$style.btnIcon" @click="nextMonth">›</button>
+          </div>
+          <div :class="$style.calendarButtons">
+            <button :class="$style.btn" @click="goToToday">Сегодня</button>
+            <button :class="[$style.btn, $style.btnPrimary]" @click="openEntryModal">
+              Новая запись
+            </button>
+          </div>
         </div>
       </div>
 

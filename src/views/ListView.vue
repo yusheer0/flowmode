@@ -1,6 +1,6 @@
 <template>
-  <div :class="$style.diaryView">
-    <div :class="$style.diaryContent">
+  <div :class="$style.listView">
+    <div :class="$style.listContent">
       <!-- Панель действий и фильтров -->
       <div :class="$style.actionsBar">
         <div :class="$style.actionsRow">
@@ -528,4 +528,4 @@ interface TelegramUpdate {
 }
 </script>
 
-<style lang="scss" module src="./DiaryView.module.scss"></style>
+<style lang="scss" module src="./ListView.module.scss"></style>

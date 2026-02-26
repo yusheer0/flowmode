@@ -1,0 +1,295 @@
+.overviewView {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.overviewContent {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+  background-color: var(--color-bg);
+}
+
+.overviewBlock {
+  width: 100%;
+  display: flex;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 4px 0;
+}
+
+.currentDate {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+// Карточки статистики
+.statsCards {
+  width: 60%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.statCard {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.statIcon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+// Прогресс
+.progressSection {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.sectionTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 16px;
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 12px;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-hover));
+  border-radius: var(--radius-md);
+  transition: width var(--transition-normal);
+
+  &.lowProgress {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+  }
+
+  &.mediumProgress {
+    background: linear-gradient(90deg, #f39c12, #e67e22);
+  }
+
+  &.highProgress {
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+  }
+}
+
+.progressText {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  min-width: 80px;
+  text-align: right;
+}
+
+// Задачи по дням
+.tasksByDays {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.daySection {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dayTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dayDate {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.dayCount {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+
+  &.countToday {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+
+  &.countYesterday {
+    background-color: var(--color-bg);
+    color: var(--color-text-secondary);
+  }
+
+  &.countTomorrow {
+    background-color: var(--color-warning-light);
+    color: var(--color-warning);
+  }
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-left: 3px solid transparent;
+
+  &:hover {
+    background-color: var(--color-hover);
+  }
+
+  &.taskCompleted {
+    opacity: 0.6;
+
+    .taskTitle {
+      text-decoration: line-through;
+      color: var(--color-text-secondary);
+    }
+  }
+
+  // Приоритеты
+  &.priorityHigh {
+    border-left-color: #e74c3c;
+  }
+
+  &.priorityMedium {
+    border-left-color: #f39c12;
+  }
+
+  &.priorityLow {
+    border-left-color: #27ae60;
+  }
+}
+
+.taskCheckbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.taskTitle {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.emptyDay {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 12px;
+}
+
+// Достижения
+.streakSection {
+  width: 40%;
+  height: 100%;
+}
+
+.streakCard {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.streakIcon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+}
+
+.streakValue {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  margin-bottom: 4px;
+}
+
+.streakLabel {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
+// Пустое состояние
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+}

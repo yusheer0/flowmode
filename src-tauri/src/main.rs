@@ -8,6 +8,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager,
 };
+use tauri_plugin_updater::UpdaterExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TelegramMessage {
@@ -302,11 +303,48 @@ fn send_telegram_file(
     }
 }
 
+/// Проверяет наличие обновлений
+#[tauri::command]
+async fn check_for_updates(app: tauri::AppHandle) -> Result<bool, String> {
+    match app.updater() {
+        Ok(update) => {
+            match update.check().await {
+                Ok(Some(_)) => Ok(true),
+                Ok(None) => Ok(false),
+                Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
+            }
+        }
+        Err(e) => Err(format!("Updater не доступен: {}", e)),
+    }
+}
+
+/// Загружает и устанавливает обновление
+#[tauri::command]
+async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String> {
+    match app.updater() {
+        Ok(updater) => {
+            match updater.check().await {
+                Ok(Some(update)) => {
+                    update
+                        .download_and_install(|_, _| {}, || {})
+                        .await
+                        .map_err(|e| format!("Ошибка установки обновления: {}", e))?;
+                    Ok(())
+                }
+                Ok(None) => Err("Обновлений не найдено".to_string()),
+                Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
+            }
+        }
+        Err(e) => Err(format!("Updater не доступен: {}", e)),
+    }
+}
+
 fn main() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             send_telegram_notification,
             test_telegram_connection,
@@ -316,6 +354,8 @@ fn main() {
             get_telegram_file,
             save_telegram_voice,
             send_telegram_file,
+            check_for_updates,
+            download_and_install_update,
         ])
         .manage(Arc::new(Mutex::new(AppState::default())));
 
