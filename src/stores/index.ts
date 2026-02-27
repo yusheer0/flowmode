@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Category, Tag, AppSettings, DiaryEntry, TelegramSettings, Habit, MoodEntry, ExportData } from '@/types'
+import type { Category, Tag, AppSettings, DiaryEntry, TelegramSettings, Habit, MoodEntry, ExportData, Note, MasterPasswordSettings, NoteSortOption, WeatherSettings } from '@/types'
+import CryptoJS from 'crypto-js'
+import bcrypt from 'bcryptjs'
 
 const APP_VERSION = '0.1.0'
 
@@ -544,6 +546,340 @@ export const useMoodStore = defineStore('mood', () => {
   }
 })
 
+export const useNotesStore = defineStore('notes', () => {
+  const notes = ref<Note[]>([])
+  const autoSaveTimers = ref<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  // Инициализация - загрузка из localStorage
+  function init(): void {
+    const stored = localStorage.getItem('notes')
+    if (stored) {
+      try {
+        notes.value = JSON.parse(stored)
+      } catch (e) {
+        console.error('Ошибка загрузки заметок:', e)
+      }
+    }
+  }
+
+  // Сохранение в localStorage
+  function saveToStorage(): void {
+    localStorage.setItem('notes', JSON.stringify(notes.value))
+  }
+
+  function addNote(content: string): void {
+    const now = new Date().toISOString()
+    const newNote: Note = {
+      id: crypto.randomUUID(),
+      content,
+      createdAt: now,
+      updatedAt: now,
+      isImportant: false,
+    }
+    notes.value.unshift(newNote)
+    saveToStorage()
+  }
+
+  function updateNote(id: string, content: string): void {
+    const index = notes.value.findIndex(n => n.id === id)
+    if (index !== -1) {
+      notes.value[index] = { ...notes.value[index], content, updatedAt: new Date().toISOString() }
+      saveToStorage()
+    }
+  }
+
+  // Автосохранение (откладывает сохранение на 1 секунду)
+  function autoSaveNote(id: string, content: string): void {
+    // Очищаем предыдущий таймер
+    const existingTimer = autoSaveTimers.value.get(id)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+    }
+
+    // Устанавливаем новый таймер
+    const timer = setTimeout(() => {
+      updateNote(id, content)
+      autoSaveTimers.value.delete(id)
+    }, 1000)
+
+    autoSaveTimers.value.set(id, timer)
+  }
+
+  function deleteNote(id: string): void {
+    const index = notes.value.findIndex(n => n.id === id)
+    if (index !== -1) {
+      // Перемещаем в корзину вместо удаления
+      const note = notes.value[index]
+      note.deletedAt = new Date().toISOString()
+      notes.value.splice(index, 1)
+      notes.value.push(note)
+      saveToStorage()
+    }
+  }
+
+  function permanentDeleteNote(id: string): void {
+    notes.value = notes.value.filter(n => n.id !== id)
+    saveToStorage()
+  }
+
+  function restoreNote(id: string): void {
+    const index = notes.value.findIndex(n => n.id === id)
+    if (index !== -1) {
+      const note = notes.value[index]
+      note.deletedAt = undefined
+      note.updatedAt = new Date().toISOString()
+      // Перемещаем в начало
+      notes.value.splice(index, 1)
+      notes.value.unshift(note)
+      saveToStorage()
+    }
+  }
+
+  function toggleImportant(id: string): void {
+    const index = notes.value.findIndex(n => n.id === id)
+    if (index !== -1) {
+      notes.value[index].isImportant = !notes.value[index].isImportant
+      notes.value[index].updatedAt = new Date().toISOString()
+      saveToStorage()
+    }
+  }
+
+  function getNote(id: string): Note | undefined {
+    return notes.value.find(n => n.id === id)
+  }
+
+  function getActiveNotes(): Note[] {
+    return notes.value.filter(n => !n.deletedAt)
+  }
+
+  function getTrashedNotes(): Note[] {
+    return notes.value.filter(n => n.deletedAt)
+  }
+
+  function clearTrash(): void {
+    notes.value = notes.value.filter(n => !n.deletedAt)
+    saveToStorage()
+  }
+
+  function sortNotes(notesToSort: Note[], option: NoteSortOption): Note[] {
+    const sorted = [...notesToSort]
+    switch (option) {
+      case 'oldest':
+        return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      case 'important':
+        return sorted.sort((a, b) => {
+          if (a.isImportant && !b.isImportant) return -1
+          if (!a.isImportant && b.isImportant) return 1
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+      case 'newest':
+      default:
+        return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+  }
+
+  return {
+    notes,
+    init,
+    addNote,
+    updateNote,
+    autoSaveNote,
+    deleteNote,
+    permanentDeleteNote,
+    restoreNote,
+    toggleImportant,
+    getNote,
+    getActiveNotes,
+    getTrashedNotes,
+    clearTrash,
+    sortNotes,
+    saveToStorage,
+  }
+})
+
+// Настройки погоды
+export const useWeatherStore = defineStore('weather', () => {
+  const weatherSettings = ref<WeatherSettings>({
+    city: 'Moscow',
+    unit: 'celsius',
+  })
+
+  // Инициализация - загрузка из localStorage
+  function init(): void {
+    const storedWeather = localStorage.getItem('weatherSettings')
+    if (storedWeather) {
+      try {
+        weatherSettings.value = JSON.parse(storedWeather)
+      } catch (e) {
+        console.error('Ошибка загрузки настроек погоды:', e)
+      }
+    }
+  }
+
+  // Сохранение настроек погоды
+  function saveWeatherSettings(): void {
+    localStorage.setItem('weatherSettings', JSON.stringify(weatherSettings.value))
+  }
+
+  // Обновление настроек погоды
+  function updateWeatherSettings(updates: Partial<WeatherSettings>): void {
+    weatherSettings.value = { ...weatherSettings.value, ...updates }
+    saveWeatherSettings()
+  }
+
+  return {
+    weatherSettings,
+    init,
+    updateWeatherSettings,
+    saveWeatherSettings,
+  }
+})
+
+// Мастер-пароль store
+export const useMasterPasswordStore = defineStore('masterPassword', () => {
+  const masterPasswordSettings = ref<MasterPasswordSettings>({
+    isSet: false,
+  })
+  const isUnlocked = ref(false)
+  const encryptionKey = ref<string | null>(null)
+
+  // Инициализация - загрузка из localStorage
+  function init(): void {
+    const stored = localStorage.getItem('masterPasswordSettings')
+    if (stored) {
+      try {
+        masterPasswordSettings.value = JSON.parse(stored)
+      } catch (e) {
+        console.error('Ошибка загрузки настроек мастер-пароля:', e)
+      }
+    }
+  }
+
+  // Сохранение настроек
+  function saveSettings(): void {
+    localStorage.setItem('masterPasswordSettings', JSON.stringify(masterPasswordSettings.value))
+  }
+
+  // Установка мастер-пароля
+  async function setMasterPassword(password: string, hint?: string): Promise<boolean> {
+    try {
+      const hash = await bcrypt.hash(password, 10)
+      masterPasswordSettings.value = {
+        isSet: true,
+        hash,
+        hint: hint || '',
+        createdAt: new Date().toISOString(),
+      }
+      saveSettings()
+      return true
+    } catch (error) {
+      console.error('Ошибка установки мастер-пароля:', error)
+      return false
+    }
+  }
+
+  // Проверка пароля
+  async function verifyPassword(password: string): Promise<boolean> {
+    if (!masterPasswordSettings.value.hash) return false
+
+    try {
+      const isValid = await bcrypt.compare(password, masterPasswordSettings.value.hash)
+      if (isValid) {
+        isUnlocked.value = true
+        encryptionKey.value = password
+      }
+      return isValid
+    } catch (error) {
+      console.error('Ошибка проверки пароля:', error)
+      return false
+    }
+  }
+
+  // Разблокировка
+  async function unlock(password: string): Promise<boolean> {
+    const isValid = await verifyPassword(password)
+    return isValid
+  }
+
+  // Блокировка
+  function lock(): void {
+    isUnlocked.value = false
+    encryptionKey.value = null
+  }
+
+  // Изменение пароля
+  async function changePassword(oldPassword: string, newPassword: string): Promise<boolean> {
+    const isValid = await verifyPassword(oldPassword)
+    if (!isValid) return false
+
+    try {
+      const hash = await bcrypt.hash(newPassword, 10)
+      masterPasswordSettings.value.hash = hash
+      masterPasswordSettings.value.hint = ''
+      saveSettings()
+      encryptionKey.value = newPassword
+      return true
+    } catch (error) {
+      console.error('Ошибка изменения пароля:', error)
+      return false
+    }
+  }
+
+  // Сброс пароля (удаляет все данные!)
+  function resetPassword(): void {
+    masterPasswordSettings.value = { isSet: false }
+    isUnlocked.value = false
+    encryptionKey.value = null
+    saveSettings()
+    // Очищаем все данные
+    localStorage.clear()
+  }
+
+  // Шифрование данных
+  function encrypt(data: string): string {
+    if (!encryptionKey.value) {
+      throw new Error('Приложение заблокировано')
+    }
+    return CryptoJS.AES.encrypt(data, encryptionKey.value).toString()
+  }
+
+  // Расшифровка данных
+  function decrypt(encrypted: string): string {
+    if (!encryptionKey.value) {
+      throw new Error('Приложение заблокировано')
+    }
+    const bytes = CryptoJS.AES.decrypt(encrypted, encryptionKey.value)
+    return bytes.toString(CryptoJS.enc.Utf8)
+  }
+
+  // Проверка установлен ли пароль
+  function isPasswordSet(): boolean {
+    return masterPasswordSettings.value.isSet
+  }
+
+  // Получение подсказки
+  function getHint(): string | undefined {
+    return masterPasswordSettings.value.hint
+  }
+
+  return {
+    masterPasswordSettings,
+    isUnlocked,
+    encryptionKey,
+    init,
+    setMasterPassword,
+    verifyPassword,
+    unlock,
+    lock,
+    changePassword,
+    resetPassword,
+    encrypt,
+    decrypt,
+    isPasswordSet,
+    getHint,
+  }
+})
+
 // Экспорт и импорт данных
 export function exportAllData(): ExportData {
   const diaryStore = useDiaryStore()
@@ -552,6 +888,7 @@ export function exportAllData(): ExportData {
   const habitsStore = useHabitsStore()
   const moodStore = useMoodStore()
   const settingsStore = useSettingsStore()
+  const notesStore = useNotesStore()
 
   return {
     version: APP_VERSION,
@@ -562,6 +899,7 @@ export function exportAllData(): ExportData {
     habits: habitsStore.habits,
     moodEntries: moodStore.moodEntries,
     settings: settingsStore.settings,
+    notes: notesStore.notes,
   }
 }
 
@@ -572,6 +910,7 @@ export function importAllData(data: ExportData): void {
   const habitsStore = useHabitsStore()
   const moodStore = useMoodStore()
   const settingsStore = useSettingsStore()
+  const notesStore = useNotesStore()
 
   // Очищаем текущие данные
   diaryStore.entries.splice(0, diaryStore.entries.length)
@@ -579,6 +918,7 @@ export function importAllData(data: ExportData): void {
   tagsStore.tags.splice(0, tagsStore.tags.length)
   habitsStore.habits.splice(0, habitsStore.habits.length)
   moodStore.moodEntries.splice(0, moodStore.moodEntries.length)
+  notesStore.notes.splice(0, notesStore.notes.length)
 
   // Импортируем новые данные
   data.entries.forEach(entry => diaryStore.addEntry(entry))
@@ -586,6 +926,26 @@ export function importAllData(data: ExportData): void {
   data.tags.forEach(tag => tagsStore.addTag(tag))
   data.habits.forEach(habit => habitsStore.addHabit(habit))
   data.moodEntries.forEach(entry => moodStore.addMoodEntry(entry))
+  data.notes?.forEach(note => {
+    notesStore.notes.push({
+      ...note,
+      isImportant: note.isImportant || false,
+    })
+  })
 
   settingsStore.updateSettings(data.settings)
+}
+
+// Шифрованный экспорт
+export function exportEncryptedData(masterPasswordStore: ReturnType<typeof useMasterPasswordStore>): string {
+  const data = exportAllData()
+  const jsonString = JSON.stringify(data)
+  return masterPasswordStore.encrypt(jsonString)
+}
+
+// Шифрованный импорт
+export function importEncryptedData(encrypted: string, masterPasswordStore: ReturnType<typeof useMasterPasswordStore>): void {
+  const decrypted = masterPasswordStore.decrypt(encrypted)
+  const data = JSON.parse(decrypted) as ExportData
+  importAllData(data)
 }

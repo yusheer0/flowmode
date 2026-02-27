@@ -1,0 +1,174 @@
+.page {
+  height: 100%;
+  overflow: auto;
+  background-color: var(--color-bg);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.profileCard {
+  width: 296px;
+  display: flex;
+  flex-direction: column;
+}
+
+.avatarWrapper {
+  margin-bottom: 16px;
+}
+
+.avatar {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0 auto;
+
+  .material-symbols-rounded {
+    font-size: 120px;
+    color: var(--color-primary);
+  }
+}
+
+.nameBlock {
+  margin-bottom: 12px;
+}
+
+.displayName {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.username {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+  text-transform: capitalize;
+}
+
+.bio {
+  font-size: 16px;
+  color: var(--color-text);
+  margin: 0 0 16px;
+  text-transform: capitalize;
+}
+
+.citySearchBlock {
+  margin-bottom: 16px;
+}
+
+.cityRow {
+  display: flex;
+  gap: 8px;
+}
+
+.nativeInput,
+.nativeSelect {
+  padding: 5px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  font-family: inherit;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+
+    :global([data-theme="dark"]) & {
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    }
+  }
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
+}
+
+.nativeInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.nativeSelect {
+  width: 70px;
+  cursor: pointer;
+}
+
+.weatherError {
+  margin-bottom: 16px;
+
+  :global(.ant-alert) {
+    margin: 0;
+  }
+}
+
+.infoList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 24px;
+
+  .material-symbols-rounded {
+    font-size: 16px;
+    width: 16px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+
+  .profileCard {
+    width: 100%;
+    align-items: center;
+    text-align: center;
+  }
+
+  .avatar {
+    width: 200px;
+    height: 200px;
+
+    .material-symbols-rounded {
+      font-size: 80px;
+    }
+  }
+
+  .cityRow {
+    justify-content: center;
+  }
+
+  .infoList {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}

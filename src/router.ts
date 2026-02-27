@@ -10,44 +10,29 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/overview',
+          redirect: '/home',
         },
         {
-          path: 'overview',
-          component: () => import('@/views/OverviewView.vue'),
-          name: 'overview',
+          path: 'home',
+          component: () => import('@/views/HomePage.vue'),
+          name: 'home',
         },
         {
-          path: 'list',
-          component: () => import('@/views/ListView.vue'),
-          name: 'list',
-        },
-        {
-          path: 'calendar',
-          component: () => import('@/views/CalendarView.vue'),
-          name: 'calendar',
-        },
-        {
-          path: 'habits',
-          component: () => import('@/views/HabitTrackerView.vue'),
-          name: 'habits',
-        },
-        {
-          path: 'mood',
-          component: () => import('@/views/MoodTrackerView.vue'),
-          name: 'mood',
+          path: 'notes',
+          component: () => import('@/views/NotesView.vue'),
+          name: 'notes',
         },
         {
           path: 'settings',
           component: () => import('@/views/SettingsView.vue'),
           name: 'settings',
         },
-        {
-          path: 'about',
-          component: () => import('@/views/AboutView.vue'),
-          name: 'about',
-        },
       ],
+    },
+    {
+      path: '/master-password',
+      component: () => import('@/views/MasterPasswordView.vue'),
+      name: 'master-password',
     },
   ],
 })

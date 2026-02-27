@@ -1,97 +1,115 @@
 .appLayout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
 }
 
-.sidebar {
-  width: var(--sidebar-width);
-  background-color: var(--color-surface);
-  border-right: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
+.header {
   flex-shrink: 0;
-  transition: width 0.3s ease;
-
-  &.sidebarCollapsed {
-    width: 74px;
-  }
-}
-
-.sidebarHeader {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 80px;
-  padding: 0 14px;
+  background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-
-  &:hover {
-    background-color: var(--color-bg);
-  }
 }
 
-.appTitle {
-  font-size: 1.2rem;
-  font-weight: 600;
+// === Header Top: logo + action buttons ===
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 52px;
+}
+
+.logo {
+  font-size: 1.1rem;
+  font-weight: 800;
   color: var(--color-text);
   letter-spacing: -1px;
-  transition: opacity var(--transition-fast), transform var(--transition-fast);
   user-select: none;
+}
 
-  .sidebarCollapsed & {
-    opacity: 0;
-    pointer-events: none;
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--color-text);
+    background-color: var(--color-bg);
+    border-color: var(--color-text-secondary);
+  }
+
+  .material-symbols-rounded {
+    font-size: 18px;
   }
 }
 
-.sidebarNav {
+.iconBtnActive {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  background-color: var(--color-bg);
+}
+
+.settingsBtn {
+  margin-left: auto;
+}
+
+// === Header Bottom: page navigation tabs ===
+
+.headerBottom {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+  height: 42px;
+  overflow-x: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 24px;
-  color: var(--color-text);
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-  cursor: pointer;
-  position: relative;
-  border-bottom: 1px solid var(--color-border);
-
-  &:hover {
-    background-color: var(--color-bg);
-  }
-
-  &:global(.router-link-active) {
-    background-color: var(--color-primary);
-    color: white;
-  }
+  gap: 6px;
+  padding: 0 14px;
+  height: 100%;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+  white-space: nowrap;
 
   .material-symbols-rounded {
-    font-size: 1.35rem;
-    flex-shrink: 0;
+    font-size: 16px;
   }
 
-  span:last-child {
-    white-space: nowrap;
-    transition: opacity 0.2s ease;
-  }
-
-  .sidebarCollapsed & {
-    justify-content: center;
-    padding: 20px 0;
-
-    span:last-child {
-      display: none;
-    }
+  &:hover {
+    color: var(--color-text);
   }
 }
+
+.navItemActive {
+  color: var(--color-text);
+  font-weight: 600;
+  border-bottom-color: var(--color-primary);
+}
+
+// === Main content ===
 
 .mainContent {
   flex: 1;
@@ -99,86 +117,23 @@
   background-color: var(--color-bg);
 }
 
-.updateSection {
-  margin-top: auto;
-  padding: 16px;
-  border-top: 1px solid var(--color-border);
-
-  .updateAvailable {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: center;
-    padding: 12px;
-    background-color: var(--color-primary);
-    border-radius: 8px;
-    color: white;
-    text-align: center;
-
-    .material-symbols-rounded {
-      font-size: 1.5rem;
-    }
-
-    .updateBtn {
-      background-color: white;
-      color: var(--color-primary);
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 0.85rem;
-      transition: opacity 0.2s;
-
-      &:hover {
-        opacity: 0.9;
-      }
-    }
+@media (max-width: 600px) {
+  .headerTop {
+    padding: 0 12px;
+    height: 42px;
   }
 
-  .updateChecking {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--color-text-secondary);
-    font-size: 0.85rem;
-
-    .material-symbols-rounded {
-      font-size: 1rem;
-      animation: spin 1s linear infinite;
-    }
+  .headerBottom {
+    padding: 0 12px;
+    height: 38px;
   }
 
-  .checkUpdateBtn {
-    width: 100%;
-    padding: 10px;
-    background-color: transparent;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text);
-    transition: background-color 0.2s, border-color 0.2s;
-
-    &:hover {
-      background-color: var(--color-bg);
-      border-color: var(--color-primary);
-    }
-
-    .material-symbols-rounded {
-      font-size: 1.25rem;
-    }
+  .logo {
+    font-size: 1rem;
   }
-}
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+  .navItem {
+    padding: 0 10px;
+    font-size: 13px;
   }
 }

@@ -7,6 +7,10 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write  # Это разрешает создание релизов
+  packages: write  # Если публикуете в GitHub Packages
+
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -303,6 +303,70 @@ fn send_telegram_file(
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct WeatherData {
+    name: String,
+    country: String,
+    temp: f64,
+    humidity: f64,
+    wind_speed: f64,
+    weather_code: i32,
+}
+
+#[tauri::command]
+fn fetch_weather(city: String, unit: String) -> Result<WeatherData, String> {
+    let geo_response = ureq::get("https://geocoding-api.open-meteo.com/v1/search")
+        .query("name", &city)
+        .query("count", "1")
+        .query("language", "ru")
+        .query("format", "json")
+        .call()
+        .map_err(|e| format!("Ошибка поиска города: {}", e))?;
+
+    let geo_json: serde_json::Value = geo_response
+        .into_json()
+        .map_err(|e| format!("Ошибка парсинга: {}", e))?;
+
+    let results = geo_json["results"]
+        .as_array()
+        .ok_or("Город не найден".to_string())?;
+
+    if results.is_empty() {
+        return Err("Город не найден".to_string());
+    }
+
+    let location = &results[0];
+    let lat = location["latitude"].as_f64().ok_or("Нет координат".to_string())?;
+    let lon = location["longitude"].as_f64().ok_or("Нет координат".to_string())?;
+    let name = location["name"].as_str().unwrap_or("").to_string();
+    let country = location["country"].as_str().unwrap_or("").to_string();
+
+    let weather_response = ureq::get("https://api.open-meteo.com/v1/forecast")
+        .query("latitude", &lat.to_string())
+        .query("longitude", &lon.to_string())
+        .query("current", "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m")
+        .query("temperature_unit", &unit)
+        .query("timezone", "auto")
+        .query("forecast_days", "1")
+        .call()
+        .map_err(|e| format!("Ошибка загрузки погоды: {}", e))?;
+
+    let weather_json: serde_json::Value = weather_response
+        .into_json()
+        .map_err(|e| format!("Ошибка парсинга погоды: {}", e))?;
+
+    let current = &weather_json["current"];
+
+    Ok(WeatherData {
+        name,
+        country,
+        temp: current["temperature_2m"].as_f64().unwrap_or(0.0),
+        humidity: current["relative_humidity_2m"].as_f64().unwrap_or(0.0),
+        wind_speed: current["wind_speed_10m"].as_f64().unwrap_or(0.0),
+        weather_code: current["weather_code"].as_i64().unwrap_or(0) as i32,
+    })
+}
+
 /// Проверяет наличие обновлений
 #[tauri::command]
 async fn check_for_updates(app: tauri::AppHandle) -> Result<bool, String> {
@@ -354,6 +418,7 @@ fn main() {
             get_telegram_file,
             save_telegram_voice,
             send_telegram_file,
+            fetch_weather,
             check_for_updates,
             download_and_install_update,
         ])

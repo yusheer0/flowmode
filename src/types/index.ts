@@ -62,7 +62,7 @@ export interface TelegramSettings {
 }
 
 export interface AppSettings {
-  theme: 'light' | 'dark' | 'mononoke'
+  theme: 'light' | 'dark'
   language: 'ru' | 'en'
   notificationsEnabled: boolean
   backupEnabled: boolean
@@ -79,4 +79,28 @@ export interface ExportData {
   habits: Habit[]
   moodEntries: MoodEntry[]
   settings: AppSettings
+  notes: Note[]
+}
+
+export interface MasterPasswordSettings {
+  isSet: boolean
+  hash?: string  // Хеш пароля
+  hint?: string  // Подсказка (опционально)
+  createdAt?: string
+}
+
+export interface Note {
+  id: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  isImportant?: boolean
+  deletedAt?: string
+}
+
+export type NoteSortOption = 'newest' | 'oldest' | 'important'
+
+export interface WeatherSettings {
+  city: string
+  unit: 'celsius' | 'fahrenheit'
 }

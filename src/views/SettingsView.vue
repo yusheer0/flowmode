@@ -23,12 +23,6 @@
             >
               Тёмная
             </button>
-            <button
-              :class="[$style.themeBtn, { [$style.active]: settings.theme === 'mononoke' }]"
-              @click="setTheme('mononoke')"
-            >
-              Mononoke
-            </button>
           </div>
         </div>
       </section>
@@ -169,11 +163,40 @@
             <span :class="$style.settingLabel">Как использовать</span>
             <span :class="$style.settingDescription">
               Отправьте боту сообщение:<br>
-              <code>/note Ваша задача</code><br><br>
+              <code>/note Ваша заметка</code> или <code>/заметка Ваша заметка</code><br><br>
               Например:<br>
               <code>/note Купить молоко</code><br>
-              <code>/note Позвонить врачу завтра в 15:00</code>
+              <code>/заметка Позвонить врачу завтра в 15:00</code>
             </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Мастер-пароль -->
+      <section :class="$style.settingsSection">
+        <h3 :class="$style.sectionTitle">Безопасность</h3>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Мастер-пароль</span>
+            <span :class="$style.settingDescription">Изменить пароль для доступа к данным</span>
+          </div>
+          <div :class="$style.settingControl">
+            <a-button size="large" @click="showChangePassword = true">
+              Изменить пароль
+            </a-button>
+          </div>
+        </div>
+
+        <div :class="$style.settingItem">
+          <div :class="$style.settingInfo">
+            <span :class="$style.settingLabel">Заблокировать приложение</span>
+            <span :class="$style.settingDescription">Требуется пароль для доступа</span>
+          </div>
+          <div :class="$style.settingControl">
+            <a-button danger size="large" @click="lockApp">
+              🔒 Заблокировать
+            </a-button>
           </div>
         </div>
       </section>
@@ -284,21 +307,88 @@
         </div>
       </section>
     </div>
+
+    <!-- Модальное окно смены пароля -->
+    <a-modal
+      v-model:open="showChangePassword"
+      title="Изменить мастер-пароль"
+      :footer="null"
+      width="500px"
+    >
+      <a-form layout="vertical" size="large" @finish="handleChangePassword">
+        <a-form-item
+          label="Текущий пароль"
+          name="oldPassword"
+          :rules="[{ required: true, message: 'Введите текущий пароль' }]"
+        >
+          <a-input-password
+            v-model:value="passwordForm.oldPassword"
+            placeholder="Текущий пароль"
+            size="large"
+          />
+        </a-form-item>
+
+        <a-form-item
+          label="Новый пароль"
+          name="newPassword"
+          :rules="[
+            { required: true, message: 'Введите новый пароль' },
+            { min: 6, message: 'Минимум 6 символов' }
+          ]"
+        >
+          <a-input-password
+            v-model:value="passwordForm.newPassword"
+            placeholder="Новый пароль"
+            size="large"
+          />
+        </a-form-item>
+
+        <a-form-item
+          label="Подтверждение нового пароля"
+          name="confirmPassword"
+          :rules="[
+            { required: true, message: 'Подтвердите новый пароль' },
+            { validator: validateConfirmPassword }
+          ]"
+        >
+          <a-input-password
+            v-model:value="passwordForm.confirmPassword"
+            placeholder="Повторите новый пароль"
+            size="large"
+          />
+        </a-form-item>
+
+        <a-form-item>
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <a-button size="large" @click="showChangePassword = false">
+              Отмена
+            </a-button>
+            <a-button type="primary" html-type="submit" size="large" :loading="passwordLoading">
+              Изменить пароль
+            </a-button>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useSettingsStore, useDiaryStore, exportAllData, importAllData } from '@/stores'
+import { useRouter } from 'vue-router'
+import { useSettingsStore, useDiaryStore, useNotesStore, useMasterPasswordStore, exportAllData, importAllData } from '@/stores'
 import type { DiaryEntry, ExportData } from '@/types'
+import type { Rule } from 'ant-design-vue/es/form'
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { sendNotification } from '@tauri-apps/plugin-notification'
 import { getVersion } from '@tauri-apps/api/app'
 
+const router = useRouter()
 const settingsStore = useSettingsStore()
 const diaryStore = useDiaryStore()
+const masterPasswordStore = useMasterPasswordStore()
 
 const settings = computed(() => settingsStore.settings)
 const testStatus = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
@@ -308,11 +398,58 @@ const appVersion = ref('0.1.0')
 let notificationInterval: ReturnType<typeof setInterval> | null = null
 let telegramPollingInterval: ReturnType<typeof setInterval> | null = null
 
+// Мастер-пароль
+const showChangePassword = ref(false)
+const passwordLoading = ref(false)
+const passwordForm = ref({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+// Валидация подтверждения пароля
+function validateConfirmPassword({ getFieldValue }: { getFieldValue: (field: string) => string }) {
+  return {
+    validator(_: Rule, value: string) {
+      if (!value || getFieldValue('newPassword') === value) {
+        return Promise.resolve()
+      }
+      return Promise.reject(new Error('Пароли не совпадают'))
+    },
+  }
+}
+
+// Изменение пароля
+async function handleChangePassword() {
+  passwordLoading.value = true
+  try {
+    const success = await masterPasswordStore.changePassword(passwordForm.value.oldPassword, passwordForm.value.newPassword)
+    if (success) {
+      alert('Пароль успешно изменён')
+      showChangePassword.value = false
+      passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    } else {
+      alert('Неверный текущий пароль')
+    }
+  } catch (error) {
+    console.error('Ошибка смены пароля:', error)
+    alert('Ошибка смены пароля')
+  } finally {
+    passwordLoading.value = false
+  }
+}
+
+// Блокировка приложения
+function lockApp(): void {
+  masterPasswordStore.lock()
+  router.push('/master-password')
+}
+
 const getChatIdInstructions = computed(() => 
   '1. Создайте бота в @BotFather<br>2. Напишите боту любое сообщение (например, /start)<br>3. Нажмите кнопку 🔍 справа от поля Chat ID<br>4. Chat ID будет получен автоматически'
 )
 
-function setTheme(theme: 'light' | 'dark' | 'mononoke'): void {
+function setTheme(theme: 'light' | 'dark'): void {
   settingsStore.updateSettings({ theme })
 }
 
@@ -619,6 +756,8 @@ async function syncTelegramMessages(): Promise<void> {
 // Проверка Telegram на новые сообщения (используется в polling и при синхронизации)
 async function checkTelegramForUpdates(): Promise<void> {
   const settings = settingsStore.settings
+  const notesStore = useNotesStore()
+  
   if (!settings.telegram.enabled || !settings.telegram.botToken) return
 
   try {
@@ -631,32 +770,30 @@ async function checkTelegramForUpdates(): Promise<void> {
 
     for (const update of updates) {
       if (update.message) {
-        // Обработка текстовых сообщений с командой /note
+        // Обработка текстовых сообщений с командой /note или /заметка
         if (update.message.text) {
           const text = update.message.text.trim()
 
-          // Проверяем команду /note
-          if (text.startsWith('/note')) {
-            const content = text.substring(5).trim() // Всё после /note
+          // Проверяем команду /note или /заметка
+          const noteCommandMatch = text.match(/^\/(note|заметка)\s+(.+)/i)
+          
+          if (noteCommandMatch) {
+            const content = noteCommandMatch[2].trim()
 
             if (content) {
-              // Создаем запись из сообщения
-              const now = new Date().toISOString()
-              const today = now.split('T')[0]
+              // Создаем заметку из сообщения
+              notesStore.addNote(content)
 
-              const newEntry: DiaryEntry = {
-                id: crypto.randomUUID(),
-                date: today,
-                title: content.length > 50 ? content.substring(0, 50) + '...' : content,
-                content: content,
-                categoryId: undefined,
-                tags: ['telegram'],
-                priority: 'medium',
-                createdAt: now,
-                updatedAt: now,
+              // Отправляем подтверждение в Telegram
+              try {
+                await invoke<boolean>('send_telegram_notification', {
+                  botToken: settings.telegram.botToken,
+                  chatId: settings.telegram.chatId,
+                  message: '✅ Заметка сохранена!',
+                })
+              } catch (error) {
+                console.error('Ошибка отправки подтверждения:', error)
               }
-
-              diaryStore.addEntry(newEntry)
             }
           }
         }
