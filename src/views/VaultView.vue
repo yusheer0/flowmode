@@ -61,91 +61,6 @@
       </div>
     </div>
 
-    <transition name="sheet">
-      <div v-if="isUnlockModalOpen" :class="$style.modalOverlay">
-        <div :class="$style.modalCard">
-          <h2>{{ t('unlockTitle') }}</h2>
-          <p :class="$style.historyHint">{{ t('unlockDescription') }}</p>
-          <template v-if="masterPasswordStore.isPasswordSet() && !isSetupMasterPassword">
-            <p v-if="masterPasswordHint" :class="$style.historyHint">
-              {{ t('hintLabel') }}: {{ masterPasswordHint }}
-            </p>
-            <input
-              v-model="unlockPassword"
-              type="password"
-              :class="$style.fieldInput"
-              :placeholder="t('unlockPlaceholder')"
-              autofocus
-              @keyup.enter="unlockVault"
-            />
-            <p v-if="unlockError" :class="$style.unlockError">{{ unlockError }}</p>
-            <div :class="$style.modalActions">
-              <button :class="$style.ghostButton" type="button" @click="cancelUnlock">{{ t('backToNotes') }}</button>
-              <button :class="$style.primaryButton" type="button" @click="unlockVault">{{ t('unlockButton') }}</button>
-            </div>
-            <button :class="$style.resetButton" type="button" @click="showResetConfirm = true">
-              {{ t('resetAllData') }}
-            </button>
-          </template>
-          <template v-else>
-            <p :class="$style.historyHint">{{ t('setupDescription') }}</p>
-            <input
-              v-model="setupForm.password"
-              type="password"
-              :class="$style.fieldInput"
-              :placeholder="t('setupPasswordPlaceholder')"
-            />
-            <p v-if="setupErrors.password" :class="$style.unlockError">{{ setupErrors.password }}</p>
-            <input
-              v-model="setupForm.confirmPassword"
-              type="password"
-              :class="$style.fieldInput"
-              :placeholder="t('setupConfirmPasswordPlaceholder')"
-            />
-            <p v-if="setupErrors.confirmPassword" :class="$style.unlockError">{{ setupErrors.confirmPassword }}</p>
-            <input
-              v-model.trim="setupForm.hint"
-              :class="$style.fieldInput"
-              :placeholder="t('setupHintPlaceholder')"
-            />
-            <div :class="$style.modalActions">
-              <button :class="$style.ghostButton" type="button" @click="cancelUnlock">{{ t('backToNotes') }}</button>
-              <button :class="$style.primaryButton" type="button" @click="setupMasterPassword">
-                {{ t('setupButtonConfirm') }}
-              </button>
-            </div>
-          </template>
-        </div>
-      </div>
-    </transition>
-
-    <transition name="sheet">
-      <div v-if="showResetConfirm" :class="$style.modalOverlay">
-        <div :class="$style.modalCard">
-          <h2>{{ t('resetTitle') }}</h2>
-          <p :class="$style.unlockError">{{ t('resetWarning') }}</p>
-          <input
-            v-model="resetConfirmText"
-            :class="$style.fieldInput"
-            :placeholder="t('resetInputPlaceholder')"
-          />
-          <div :class="$style.modalActions">
-            <button :class="$style.ghostButton" type="button" @click="showResetConfirm = false">
-              {{ t('cancel') }}
-            </button>
-            <button
-              :class="$style.primaryButton"
-              type="button"
-              :disabled="resetConfirmText !== 'СБРОСИТЬ'"
-              @click="resetMasterPassword"
-            >
-              {{ t('resetConfirmButton') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
     <transition :name="isEditing ? 'top-sheet' : 'sheet'">
       <div
         v-if="isFormModalOpen"
@@ -232,26 +147,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Copy, Eye, Pencil, Search, SquarePlus, Trash2 } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
-import { useMasterPasswordStore, useSettingsStore, useVaultStore } from '@/stores'
+import { useSettingsStore, useVaultStore } from '@/stores'
 import type { VaultItem, VaultItemInput } from '@/types'
 
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
-  embedded: false,
-})
-const emit = defineEmits<{ close: [] }>()
-const router = useRouter()
 const vaultStore = useVaultStore()
 const settingsStore = useSettingsStore()
-const masterPasswordStore = useMasterPasswordStore()
 
 const searchQuery = ref('')
 const isFormModalOpen = ref(false)
 const isRevealModalOpen = ref(false)
 const isSearchModalOpen = ref(false)
-const isUnlockModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
 const isEditing = ref(false)
 const editingId = ref<string | null>(null)
@@ -259,21 +166,6 @@ const pendingDeleteItemId = ref<string | null>(null)
 const revealItemId = ref<string | null>(null)
 const revealItemTitle = ref('')
 const revealedPassword = ref<string | null>(null)
-const unlockPassword = ref('')
-const unlockError = ref('')
-const masterPasswordHint = ref<string | undefined>()
-const isSetupMasterPassword = ref(false)
-const showResetConfirm = ref(false)
-const resetConfirmText = ref('')
-const setupForm = ref({
-  password: '',
-  confirmPassword: '',
-  hint: '',
-})
-const setupErrors = ref({
-  password: '',
-  confirmPassword: '',
-})
 const form = ref({
   title: '',
   username: '',
@@ -283,7 +175,6 @@ const form = ref({
 
 const TRANSLATIONS = {
   ru: {
-    backToNotes: 'К заметкам',
     vaultTitle: 'Password Vault',
     searchTitle: 'Поиск',
     searchPlaceholder: 'Поиск по vault...',
@@ -306,25 +197,7 @@ const TRANSLATIONS = {
     save: 'Сохранить',
     revealTitle: 'Временный показ пароля',
     revealHint: 'Пароль хранится в памяти временно и автоматически скрывается.',
-    unlockTitle: 'Введите мастер-пароль',
-    unlockDescription: 'Разблокируйте vault для доступа к записям.',
-    unlockPlaceholder: 'Мастер-пароль',
-    unlockButton: 'Разблокировать',
-    unlockFailed: 'Неверный пароль',
-    setupRequired: 'Сначала установите мастер-пароль.',
-    setupDescription: 'Придумайте мастер-пароль для защиты данных vault.',
-    setupPasswordPlaceholder: 'Новый мастер-пароль',
-    setupConfirmPasswordPlaceholder: 'Подтверждение пароля',
-    setupHintPlaceholder: 'Подсказка (необязательно)',
-    setupButton: 'Открыть настройку',
-    setupButtonConfirm: 'Установить пароль',
-    hintLabel: 'Подсказка',
     close: 'Закрыть',
-    resetAllData: 'Сбросить пароль и все данные',
-    resetTitle: 'Подтвердите сброс',
-    resetWarning: 'Это действие удалит мастер-пароль и все сохраненные данные приложения.',
-    resetInputPlaceholder: "Введите 'СБРОСИТЬ' для подтверждения",
-    resetConfirmButton: 'Сбросить все',
     created: 'Создано',
     updated: 'Обновлено',
     deleted: 'Удалено',
@@ -335,7 +208,6 @@ const TRANSLATIONS = {
     deleteConfirmDescription: 'Запись будет удалена из vault без возможности восстановления.',
   },
   en: {
-    backToNotes: 'Back to notes',
     vaultTitle: 'Password Vault',
     searchTitle: 'Search',
     searchPlaceholder: 'Search vault...',
@@ -358,25 +230,7 @@ const TRANSLATIONS = {
     save: 'Save',
     revealTitle: 'Temporary password reveal',
     revealHint: 'Password is cached in memory for a short time and then hidden.',
-    unlockTitle: 'Enter master password',
-    unlockDescription: 'Unlock vault to access your records.',
-    unlockPlaceholder: 'Master password',
-    unlockButton: 'Unlock',
-    unlockFailed: 'Incorrect password',
-    setupRequired: 'Set a master password first.',
-    setupDescription: 'Create a master password to protect vault data.',
-    setupPasswordPlaceholder: 'New master password',
-    setupConfirmPasswordPlaceholder: 'Confirm password',
-    setupHintPlaceholder: 'Hint (optional)',
-    setupButton: 'Open setup',
-    setupButtonConfirm: 'Set password',
-    hintLabel: 'Hint',
     close: 'Close',
-    resetAllData: 'Reset password and all data',
-    resetTitle: 'Confirm reset',
-    resetWarning: 'This action will delete master password and all stored app data.',
-    resetInputPlaceholder: "Type 'СБРОСИТЬ' to confirm",
-    resetConfirmButton: 'Reset all',
     created: 'Created',
     updated: 'Updated',
     deleted: 'Deleted',
@@ -494,7 +348,6 @@ function closeRevealModal(): void {
 }
 
 function openSearchModal(): void {
-  if (isUnlockModalOpen.value) return
   isSearchModalOpen.value = true
 }
 
@@ -542,132 +395,9 @@ function getMaskedPassword(itemId: string, fallback: string): string {
   return vaultStore.getVisiblePassword(itemId) || fallback
 }
 
-function goToNotes(): void {
-  router.push('/notes')
-}
-
-function closeEmbeddedView(): void {
-  emit('close')
-}
-
-function openUnlockModal(): void {
-  unlockPassword.value = ''
-  unlockError.value = ''
-  setupErrors.value.password = ''
-  setupErrors.value.confirmPassword = ''
-  setupForm.value = {
-    password: '',
-    confirmPassword: '',
-    hint: '',
-  }
-  resetConfirmText.value = ''
-  showResetConfirm.value = false
-  closeSearchModal()
-  masterPasswordHint.value = masterPasswordStore.getHint()
-  isSetupMasterPassword.value = !masterPasswordStore.isPasswordSet()
-  isUnlockModalOpen.value = true
-}
-
-async function unlockVault(): Promise<void> {
-  unlockError.value = ''
-  if (!unlockPassword.value.trim()) {
-    unlockError.value = t('unlockFailed')
-    return
-  }
-  const success = await masterPasswordStore.unlock(unlockPassword.value)
-  if (!success) {
-    unlockError.value = t('unlockFailed')
-    return
-  }
-  isUnlockModalOpen.value = false
-  unlockPassword.value = ''
-  await vaultStore.refreshItems()
-}
-
-function validateSetupForm(): boolean {
-  setupErrors.value.password = ''
-  setupErrors.value.confirmPassword = ''
-  if (!setupForm.value.password) {
-    setupErrors.value.password = t('unlockFailed')
-    return false
-  }
-  if (setupForm.value.password.length < 6) {
-    setupErrors.value.password = 'Минимум 6 символов'
-    return false
-  }
-  if (!setupForm.value.confirmPassword) {
-    setupErrors.value.confirmPassword = 'Подтвердите пароль'
-    return false
-  }
-  if (setupForm.value.password !== setupForm.value.confirmPassword) {
-    setupErrors.value.confirmPassword = 'Пароли не совпадают'
-    return false
-  }
-  return true
-}
-
-async function setupMasterPassword(): Promise<void> {
-  if (!validateSetupForm()) return
-  const setupSuccess = await masterPasswordStore.setMasterPassword(
-    setupForm.value.password,
-    setupForm.value.hint || '',
-  )
-  if (!setupSuccess) {
-    alert('Ошибка установки пароля')
-    return
-  }
-  const unlockSuccess = await masterPasswordStore.unlock(setupForm.value.password)
-  if (!unlockSuccess) {
-    alert('Ошибка разблокировки')
-    return
-  }
-  isSetupMasterPassword.value = false
-  isUnlockModalOpen.value = false
-  await vaultStore.refreshItems()
-}
-
-function resetMasterPassword(): void {
-  if (resetConfirmText.value !== 'СБРОСИТЬ') return
-  masterPasswordStore.resetPassword()
-  showResetConfirm.value = false
-  resetConfirmText.value = ''
-  isSetupMasterPassword.value = true
-  setupForm.value = {
-    password: '',
-    confirmPassword: '',
-    hint: '',
-  }
-  alert('Пароль сброшен. Все данные удалены.')
-}
-
-function cancelUnlock(): void {
-  if (props.embedded) {
-    closeEmbeddedView()
-    return
-  }
-  goToNotes()
-}
-
 onMounted(async () => {
-  if (!masterPasswordStore.isPasswordSet()) {
-    openUnlockModal()
-    return
-  }
-  if (!masterPasswordStore.isUnlocked) {
-    openUnlockModal()
-    return
-  }
   await vaultStore.refreshItems()
 })
-
-watch(
-  () => masterPasswordStore.isUnlocked,
-  async (isUnlocked) => {
-    if (!isUnlocked || !isUnlockModalOpen.value) return
-    isUnlockModalOpen.value = false
-    await vaultStore.refreshItems()
-  },
-)
 </script>
 
 <style lang="scss" module src="./VaultView.module.scss"></style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Layers3, Pin, Search, Settings, SquarePlus, Trash2, X } from 'lucide-vue-next'
+import { Layers3, Heart, Search, Settings, SquarePlus, Trash2, X } from 'lucide-vue-next'
 import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
@@ -397,7 +397,7 @@ onBeforeUnmount(() => {
             title="Закрепить"
             @click.stop="toggleImportant(note.id)"
           >
-            <Pin :size="14" />
+            <Heart :size="14" />
           </button>
           <button
             :class="$style.cardAction"
@@ -481,7 +481,7 @@ onBeforeUnmount(() => {
     </transition>
 
     <transition v-if="activeView === 'notes'" name="top-sheet">
-      <div v-if="isEditModalOpen" :class="$style.topModalOverlay" @click.self="closeEditModal">
+      <div v-if="isEditModalOpen" :class="$style.topModalOverlay">
         <div :class="[$style.modalSheet, $style.topModalSheet]">
           <button :class="$style.modalClose" type="button" title="Закрыть" @click="closeEditModal">
             <X :size="18" />

@@ -151,13 +151,22 @@
 }
 
 .cardAction {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
   display: grid;
   place-items: center;
   color: var(--color-text);
-  transition: background-color 0.18s ease;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 
   &:hover {
     background: rgba(127, 127, 127, 0.16);
@@ -298,12 +307,12 @@
 
 :global(.sheet-enter-active),
 :global(.sheet-leave-active) {
-  transition: background-color 0.26s ease;
+  transition: background-color 0.13s ease;
 }
 
 :global(.sheet-enter-active) .modalCard,
 :global(.sheet-leave-active) .modalCard {
-  transition: transform 0.26s ease;
+  transition: transform 0.13s ease;
 }
 
 :global(.sheet-enter-from),
@@ -323,12 +332,12 @@
 
 :global(.top-sheet-enter-active),
 :global(.top-sheet-leave-active) {
-  transition: background-color 0.24s ease;
+  transition: background-color 0.12s ease;
 }
 
 :global(.top-sheet-enter-active) .topModalCard,
 :global(.top-sheet-leave-active) .topModalCard {
-  transition: transform 0.24s ease, opacity 0.24s ease;
+  transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
 :global(.top-sheet-enter-from),

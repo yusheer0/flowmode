@@ -21,7 +21,7 @@
 
 .canvas {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: start;
   gap: 12px;
   width: 100%;
@@ -45,7 +45,7 @@
   min-width: 0;
   min-height: 240px;
   border-radius: 16px;
-  padding: 14px;
+  padding: 20px;
   padding-bottom: 44px;
   background: rgba(120, 120, 125, 0.55);
   color: #ffffff;
@@ -65,7 +65,7 @@
 .noteTitle {
   margin: 0 0 10px;
   width: 100%;
-  color: inherit;
+  color: var(--color-text);
   font-size: 20px;
   line-height: 1.2;
   font-weight: 600;
@@ -90,10 +90,11 @@
 
 .noteActions {
   position: absolute;
-  right: 12px;
-  bottom: 10px;
+  right: 8px;
+  bottom: 8px;
   display: flex;
   justify-content: flex-end;
+  gap: 4px;
   opacity: 0;
   transform: translateY(14px);
   pointer-events: none;
@@ -107,21 +108,36 @@
 }
 
 .cardAction {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  color: #ffffff;
-  transition: background-color 0.18s ease;
+  color: #000000;
+  background: #c1c1c1;
+  transition: background-color 0.4s ease, color 0.4s ease;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: #000000;
+    color: #ffffff;
   }
 }
 
 .cardActionActive {
-  background: rgba(255, 255, 255, 0.2);
+  background: #6e6e73;
+  color: #000000;
+
+  &:hover {
+    background: #000000;
+    color: #ffffff;
+  }
 }
 
 .emptyState {
@@ -868,12 +884,12 @@
 
 :global(.sheet-enter-active),
 :global(.sheet-leave-active) {
-  transition: background-color 0.26s ease;
+  transition: background-color 0.5s ease;
 }
 
 :global(.sheet-enter-active) .modalSheet,
 :global(.sheet-leave-active) .modalSheet {
-  transition: transform 0.26s ease;
+  transition: transform 0.5s ease;
 }
 
 :global(.sheet-enter-from),
@@ -893,12 +909,12 @@
 
 :global(.top-sheet-enter-active),
 :global(.top-sheet-leave-active) {
-  transition: background-color 0.24s ease;
+  transition: background-color 0.12s ease;
 }
 
 :global(.top-sheet-enter-active) .topModalSheet,
 :global(.top-sheet-leave-active) .topModalSheet {
-  transition: transform 0.24s ease, opacity 0.24s ease;
+  transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
 :global(.top-sheet-enter-from),
