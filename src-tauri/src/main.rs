@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use rand::seq::SliceRandom;
 use rusqlite::{Connection, OptionalExtension, params};
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -332,6 +333,19 @@ struct UpdateDownloadProgress {
     content_length: Option<u64>,
     progress: Option<f64>,
     version: String,
+}
+
+fn format_error_chain(error: &dyn Error) -> String {
+    let mut details = error.to_string();
+    let mut source = error.source();
+
+    while let Some(cause) = source {
+        details.push_str(": ");
+        details.push_str(&cause.to_string());
+        source = cause.source();
+    }
+
+    details
 }
 
 const SQLITE_FILE_NAME: &str = "flowmode.sqlite";
@@ -940,10 +954,13 @@ async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateCheckResult, S
                     current_version,
                     target_version: None,
                 }),
-                Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
+                Err(e) => Err(format!(
+                    "Ошибка проверки обновлений: {}",
+                    format_error_chain(&e)
+                )),
             }
         }
-        Err(e) => Err(format!("Updater не доступен: {}", e)),
+        Err(e) => Err(format!("Updater не доступен: {}", format_error_chain(&e))),
     }
 }
 
@@ -979,14 +996,22 @@ async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String
                             || {},
                         )
                         .await
-                        .map_err(|e| format!("Ошибка установки обновления: {}", e))?;
+                        .map_err(|e| {
+                            format!(
+                                "Ошибка установки обновления: {}",
+                                format_error_chain(&e)
+                            )
+                        })?;
                     app.restart();
                 }
                 Ok(None) => Err("Обновлений не найдено".to_string()),
-                Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
+                Err(e) => Err(format!(
+                    "Ошибка проверки обновлений: {}",
+                    format_error_chain(&e)
+                )),
             }
         }
-        Err(e) => Err(format!("Updater не доступен: {}", e)),
+        Err(e) => Err(format!("Updater не доступен: {}", format_error_chain(&e))),
     }
 }
 
