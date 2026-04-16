@@ -1,12 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
+use rand::seq::SliceRandom;
+use rusqlite::{Connection, OptionalExtension, params};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
 use tauri_plugin_updater::UpdaterExt;
 
@@ -313,6 +317,558 @@ struct WeatherData {
     weather_code: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateCheckResult {
+    available: bool,
+    current_version: String,
+    target_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateDownloadProgress {
+    downloaded: u64,
+    content_length: Option<u64>,
+    progress: Option<f64>,
+    version: String,
+}
+
+const SQLITE_FILE_NAME: &str = "flowmode.sqlite";
+
+fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
+    let db_dir = app
+        .path()
+        .data_dir()
+        .map_err(|error| format!("Ошибка получения data_dir: {}", error))?
+        .join("flowmode");
+
+    fs::create_dir_all(&db_dir)
+        .map_err(|error| format!("Ошибка создания директории БД: {}", error))?;
+
+    let db_path = db_dir.join(SQLITE_FILE_NAME);
+    let connection = Connection::open(&db_path)
+        .map_err(|error| format!("Ошибка открытия SQLite: {}", error))?;
+    connection
+        .execute_batch(
+            r#"
+            CREATE TABLE IF NOT EXISTS kv_store (
+              key TEXT PRIMARY KEY NOT NULL,
+              value TEXT NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS vault_items (
+              id TEXT PRIMARY KEY NOT NULL,
+              title TEXT NOT NULL,
+              service TEXT NOT NULL,
+              username TEXT NOT NULL,
+              password TEXT NOT NULL,
+              url TEXT,
+              notes TEXT,
+              tags_json TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS vault_events (
+              id TEXT PRIMARY KEY NOT NULL,
+              item_id TEXT NOT NULL,
+              event_type TEXT NOT NULL,
+              created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_vault_items_updated_at ON vault_items(updated_at);
+            CREATE INDEX IF NOT EXISTS idx_vault_events_created_at ON vault_events(created_at);
+            CREATE INDEX IF NOT EXISTS idx_vault_events_item_id ON vault_events(item_id);
+            "#,
+        )
+        .map_err(|error| format!("Ошибка инициализации SQLite схемы: {}", error))?;
+    Ok(connection)
+}
+
+#[tauri::command]
+fn storage_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
+    let connection = open_database(&app)?;
+    connection
+        .query_row(
+            "SELECT value FROM kv_store WHERE key = ?1",
+            params![key],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| format!("Ошибка чтения из SQLite: {}", error))
+}
+
+#[tauri::command]
+fn storage_get_many(app: tauri::AppHandle, keys: Vec<String>) -> Result<HashMap<String, String>, String> {
+    let connection = open_database(&app)?;
+    let mut result = HashMap::new();
+    let mut statement = connection
+        .prepare("SELECT value FROM kv_store WHERE key = ?1")
+        .map_err(|error| format!("Ошибка подготовки запроса SQLite: {}", error))?;
+
+    for key in keys {
+        let value = statement
+            .query_row(params![&key], |row| row.get::<_, String>(0))
+            .optional()
+            .map_err(|error| format!("Ошибка чтения ключа `{}` из SQLite: {}", key, error))?;
+        if let Some(raw) = value {
+            result.insert(key, raw);
+        }
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+fn storage_set(app: tauri::AppHandle, key: String, value: String) -> Result<bool, String> {
+    let connection = open_database(&app)?;
+    connection
+        .execute(
+            r#"
+            INSERT INTO kv_store (key, value, updated_at)
+            VALUES (?1, ?2, CAST(strftime('%s','now') AS INTEGER))
+            ON CONFLICT(key) DO UPDATE SET
+              value = excluded.value,
+              updated_at = excluded.updated_at
+            "#,
+            params![key, value],
+        )
+        .map(|_| true)
+        .map_err(|error| format!("Ошибка записи в SQLite: {}", error))
+}
+
+#[tauri::command]
+fn storage_remove(app: tauri::AppHandle, key: String) -> Result<bool, String> {
+    let connection = open_database(&app)?;
+    connection
+        .execute("DELETE FROM kv_store WHERE key = ?1", params![key])
+        .map(|affected| affected > 0)
+        .map_err(|error| format!("Ошибка удаления из SQLite: {}", error))
+}
+
+#[tauri::command]
+fn storage_clear_all(app: tauri::AppHandle) -> Result<bool, String> {
+    let connection = open_database(&app)?;
+    connection
+        .execute_batch(
+            r#"
+            DELETE FROM kv_store;
+            DELETE FROM vault_events;
+            DELETE FROM vault_items;
+            "#,
+        )
+        .map(|_| true)
+        .map_err(|error| format!("Ошибка очистки SQLite: {}", error))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VaultEvent {
+    id: String,
+    item_id: String,
+    event_type: String,
+    created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VaultStoredItem {
+    id: String,
+    title: String,
+    service: String,
+    username: String,
+    password: String,
+    url: Option<String>,
+    notes: Option<String>,
+    tags: Vec<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VaultListItem {
+    id: String,
+    title: String,
+    service: String,
+    username: String,
+    password_masked: String,
+    url: Option<String>,
+    notes: Option<String>,
+    tags: Vec<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct VaultItemInput {
+    title: String,
+    service: String,
+    username: String,
+    password: String,
+    url: Option<String>,
+    notes: Option<String>,
+    tags: Vec<String>,
+}
+
+fn now_unix_ms() -> String {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis().to_string())
+        .unwrap_or_else(|_| "0".to_string())
+}
+
+fn random_id(prefix: &str) -> String {
+    format!("{}-{}-{}", prefix, now_unix_ms(), rand::random::<u32>())
+}
+
+fn parse_tags(tags_json: String) -> Vec<String> {
+    serde_json::from_str::<Vec<String>>(&tags_json).unwrap_or_default()
+}
+
+fn to_vault_list_item(item: &VaultStoredItem) -> VaultListItem {
+    VaultListItem {
+        id: item.id.clone(),
+        title: item.title.clone(),
+        service: item.service.clone(),
+        username: item.username.clone(),
+        password_masked: "********".to_string(),
+        url: item.url.clone(),
+        notes: item.notes.clone(),
+        tags: item.tags.clone(),
+        created_at: item.created_at.clone(),
+        updated_at: item.updated_at.clone(),
+    }
+}
+
+fn append_vault_event(connection: &Connection, item_id: &str, event_type: &str) -> Result<(), String> {
+    connection
+        .execute(
+            "INSERT INTO vault_events (id, item_id, event_type, created_at) VALUES (?1, ?2, ?3, ?4)",
+            params![random_id("event"), item_id, event_type, now_unix_ms()],
+        )
+        .map(|_| ())
+        .map_err(|error| format!("Ошибка сохранения события vault: {}", error))
+}
+
+fn load_vault_items(connection: &Connection) -> Result<Vec<VaultStoredItem>, String> {
+    let mut statement = connection
+        .prepare(
+            r#"
+            SELECT id, title, service, username, password, url, notes, tags_json, created_at, updated_at
+            FROM vault_items
+            ORDER BY updated_at DESC
+            "#,
+        )
+        .map_err(|error| format!("Ошибка подготовки чтения vault_items: {}", error))?;
+
+    let rows = statement
+        .query_map([], |row| {
+            Ok(VaultStoredItem {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                service: row.get(2)?,
+                username: row.get(3)?,
+                password: row.get(4)?,
+                url: row.get(5)?,
+                notes: row.get(6)?,
+                tags: parse_tags(row.get(7)?),
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
+            })
+        })
+        .map_err(|error| format!("Ошибка чтения vault_items: {}", error))?;
+
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("Ошибка обработки vault_items: {}", error))
+}
+
+#[tauri::command]
+fn vault_list(app: tauri::AppHandle) -> Result<Vec<VaultListItem>, String> {
+    let connection = open_database(&app)?;
+    let items = load_vault_items(&connection)?;
+    Ok(items.iter().map(to_vault_list_item).collect())
+}
+
+#[tauri::command]
+fn vault_list_events(app: tauri::AppHandle, item_id: Option<String>) -> Result<Vec<VaultEvent>, String> {
+    let connection = open_database(&app)?;
+    if let Some(id) = item_id {
+        let mut statement = connection
+            .prepare(
+                r#"
+                SELECT id, item_id, event_type, created_at
+                FROM vault_events
+                WHERE item_id = ?1
+                ORDER BY created_at DESC
+                "#,
+            )
+            .map_err(|error| format!("Ошибка подготовки чтения vault_events: {}", error))?;
+        let rows = statement
+            .query_map(params![id], |row| {
+                Ok(VaultEvent {
+                    id: row.get(0)?,
+                    item_id: row.get(1)?,
+                    event_type: row.get(2)?,
+                    created_at: row.get(3)?,
+                })
+            })
+            .map_err(|error| format!("Ошибка чтения истории vault: {}", error))?;
+        let events = rows
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("Ошибка обработки истории vault: {}", error))?;
+        return Ok(events);
+    } else {
+        let mut statement = connection
+            .prepare(
+                r#"
+                SELECT id, item_id, event_type, created_at
+                FROM vault_events
+                ORDER BY created_at DESC
+                "#,
+            )
+            .map_err(|error| format!("Ошибка подготовки чтения vault_events: {}", error))?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok(VaultEvent {
+                    id: row.get(0)?,
+                    item_id: row.get(1)?,
+                    event_type: row.get(2)?,
+                    created_at: row.get(3)?,
+                })
+            })
+            .map_err(|error| format!("Ошибка чтения истории vault: {}", error))?;
+        let events = rows
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("Ошибка обработки истории vault: {}", error))?;
+        return Ok(events);
+    }
+}
+
+#[tauri::command]
+fn vault_create(app: tauri::AppHandle, input: VaultItemInput) -> Result<VaultListItem, String> {
+    if input.password.trim().is_empty() {
+        return Err("Пароль не может быть пустым".to_string());
+    }
+
+    let connection = open_database(&app)?;
+    let now = now_unix_ms();
+    let item = VaultStoredItem {
+        id: random_id("vault"),
+        title: input.title.trim().to_string(),
+        service: input.service.trim().to_string(),
+        username: input.username.trim().to_string(),
+        password: input.password,
+        url: input.url.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        notes: input.notes.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        tags: input
+            .tags
+            .iter()
+            .map(|tag| tag.trim().to_string())
+            .filter(|tag| !tag.is_empty())
+            .collect(),
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    let tags_json = serde_json::to_string(&item.tags)
+        .map_err(|error| format!("Ошибка сериализации тегов vault: {}", error))?;
+    connection
+        .execute(
+            r#"
+            INSERT INTO vault_items (id, title, service, username, password, url, notes, tags_json, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            "#,
+            params![
+                &item.id,
+                &item.title,
+                &item.service,
+                &item.username,
+                &item.password,
+                &item.url,
+                &item.notes,
+                tags_json,
+                &item.created_at,
+                &item.updated_at
+            ],
+        )
+        .map_err(|error| format!("Ошибка сохранения vault-записи: {}", error))?;
+    append_vault_event(&connection, &item.id, "created")?;
+    Ok(to_vault_list_item(&item))
+}
+
+#[tauri::command]
+fn vault_update(app: tauri::AppHandle, id: String, input: VaultItemInput) -> Result<VaultListItem, String> {
+    if input.password.trim().is_empty() {
+        return Err("Пароль не может быть пустым".to_string());
+    }
+
+    let connection = open_database(&app)?;
+    let existing = {
+        let mut statement = connection
+            .prepare(
+                r#"
+                SELECT id, title, service, username, password, url, notes, tags_json, created_at, updated_at
+                FROM vault_items
+                WHERE id = ?1
+                "#,
+            )
+            .map_err(|error| format!("Ошибка подготовки чтения vault-записи: {}", error))?;
+        statement
+            .query_row(params![&id], |row| {
+                Ok(VaultStoredItem {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    service: row.get(2)?,
+                    username: row.get(3)?,
+                    password: row.get(4)?,
+                    url: row.get(5)?,
+                    notes: row.get(6)?,
+                    tags: parse_tags(row.get(7)?),
+                    created_at: row.get(8)?,
+                    updated_at: row.get(9)?,
+                })
+            })
+            .optional()
+            .map_err(|error| format!("Ошибка чтения vault-записи: {}", error))?
+            .ok_or("Запись не найдена".to_string())?
+    };
+
+    let updated = VaultStoredItem {
+        id: existing.id.clone(),
+        title: input.title.trim().to_string(),
+        service: input.service.trim().to_string(),
+        username: input.username.trim().to_string(),
+        password: input.password,
+        url: input.url.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        notes: input.notes.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        tags: input
+            .tags
+            .iter()
+            .map(|tag| tag.trim().to_string())
+            .filter(|tag| !tag.is_empty())
+            .collect(),
+        created_at: existing.created_at,
+        updated_at: now_unix_ms(),
+    };
+
+    let tags_json = serde_json::to_string(&updated.tags)
+        .map_err(|error| format!("Ошибка сериализации тегов vault: {}", error))?;
+    connection
+        .execute(
+            r#"
+            UPDATE vault_items
+            SET title = ?2, service = ?3, username = ?4, password = ?5, url = ?6, notes = ?7, tags_json = ?8, updated_at = ?9
+            WHERE id = ?1
+            "#,
+            params![
+                &id,
+                &updated.title,
+                &updated.service,
+                &updated.username,
+                &updated.password,
+                &updated.url,
+                &updated.notes,
+                tags_json,
+                &updated.updated_at
+            ],
+        )
+        .map_err(|error| format!("Ошибка обновления vault-записи: {}", error))?;
+    append_vault_event(&connection, &id, "updated")?;
+    Ok(to_vault_list_item(&updated))
+}
+
+#[tauri::command]
+fn vault_delete(app: tauri::AppHandle, id: String) -> Result<bool, String> {
+    let connection = open_database(&app)?;
+    let deleted = connection
+        .execute("DELETE FROM vault_items WHERE id = ?1", params![&id])
+        .map_err(|error| format!("Ошибка удаления vault-записи: {}", error))?;
+    if deleted == 0 {
+        return Ok(false);
+    }
+    append_vault_event(&connection, &id, "deleted")?;
+    Ok(true)
+}
+
+#[tauri::command]
+fn vault_reveal(app: tauri::AppHandle, id: String) -> Result<String, String> {
+    let connection = open_database(&app)?;
+    let password = connection
+        .query_row(
+            "SELECT password FROM vault_items WHERE id = ?1",
+            params![&id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| format!("Ошибка чтения vault-записи: {}", error))?
+        .ok_or("Запись не найдена".to_string())?;
+    append_vault_event(&connection, &id, "revealed")?;
+    Ok(password)
+}
+
+#[tauri::command]
+fn vault_log_copy(app: tauri::AppHandle, item_id: String, field: String) -> Result<bool, String> {
+    let connection = open_database(&app)?;
+    let has_item = connection
+        .query_row(
+            "SELECT 1 FROM vault_items WHERE id = ?1 LIMIT 1",
+            params![&item_id],
+            |_| Ok(true),
+        )
+        .optional()
+        .map_err(|error| format!("Ошибка проверки vault-записи: {}", error))?
+        .unwrap_or(false);
+    if !has_item {
+        return Ok(false);
+    }
+    let event_type = if field == "username" { "copied_login" } else { "copied_password" };
+    append_vault_event(&connection, &item_id, event_type)?;
+    Ok(true)
+}
+
+#[tauri::command]
+fn vault_generate_password(
+    length: Option<usize>,
+    include_symbols: Option<bool>,
+    include_digits: Option<bool>,
+    avoid_ambiguous: Option<bool>,
+) -> Result<String, String> {
+    let normalized_length = length.unwrap_or(20).clamp(8, 64);
+    let with_symbols = include_symbols.unwrap_or(true);
+    let with_digits = include_digits.unwrap_or(true);
+    let avoid_ambiguous_chars = avoid_ambiguous.unwrap_or(true);
+
+    let lower = "abcdefghijkmnopqrstuvwxyz";
+    let upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    let digits = if avoid_ambiguous_chars { "23456789" } else { "0123456789" };
+    let symbols = "!@#$%^&*()-_=+[]{};:,.?";
+
+    let mut pool = format!("{}{}", lower, upper);
+    if with_digits {
+        pool.push_str(digits);
+    }
+    if with_symbols {
+        pool.push_str(symbols);
+    }
+    if !avoid_ambiguous_chars {
+        pool.push_str("Il1O0");
+    }
+
+    if pool.is_empty() {
+        return Err("Недостаточно символов для генерации пароля".to_string());
+    }
+
+    let mut rng = rand::thread_rng();
+    let charset: Vec<char> = pool.chars().collect();
+    let generated = (0..normalized_length)
+        .map(|_| charset.choose(&mut rng).copied().unwrap_or('a'))
+        .collect::<String>();
+    Ok(generated)
+}
+
 #[tauri::command]
 fn fetch_weather(city: String, unit: String) -> Result<WeatherData, String> {
     let geo_response = ureq::get("https://geocoding-api.open-meteo.com/v1/search")
@@ -369,12 +925,21 @@ fn fetch_weather(city: String, unit: String) -> Result<WeatherData, String> {
 
 /// Проверяет наличие обновлений
 #[tauri::command]
-async fn check_for_updates(app: tauri::AppHandle) -> Result<bool, String> {
+async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateCheckResult, String> {
+    let current_version = app.package_info().version.to_string();
     match app.updater() {
         Ok(update) => {
             match update.check().await {
-                Ok(Some(_)) => Ok(true),
-                Ok(None) => Ok(false),
+                Ok(Some(update)) => Ok(UpdateCheckResult {
+                    available: true,
+                    current_version,
+                    target_version: Some(update.version.to_string()),
+                }),
+                Ok(None) => Ok(UpdateCheckResult {
+                    available: false,
+                    current_version,
+                    target_version: None,
+                }),
                 Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
             }
         }
@@ -389,11 +954,33 @@ async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String
         Ok(updater) => {
             match updater.check().await {
                 Ok(Some(update)) => {
+                    let target_version = update.version.to_string();
+                    let app_handle = app.clone();
+                    let emit_version = target_version.clone();
                     update
-                        .download_and_install(|_, _| {}, || {})
+                        .download_and_install(
+                            move |downloaded, content_length| {
+                                let progress = content_length
+                                    .and_then(|total| {
+                                        if total > 0 {
+                                            Some((downloaded as f64 / total as f64) * 100.0)
+                                        } else {
+                                            None
+                                        }
+                                    });
+                                let payload = UpdateDownloadProgress {
+                                    downloaded: downloaded as u64,
+                                    content_length,
+                                    progress,
+                                    version: emit_version.clone(),
+                                };
+                                let _ = app_handle.emit("update_download_progress", payload);
+                            },
+                            || {},
+                        )
                         .await
                         .map_err(|e| format!("Ошибка установки обновления: {}", e))?;
-                    Ok(())
+                    app.restart();
                 }
                 Ok(None) => Err("Обновлений не найдено".to_string()),
                 Err(e) => Err(format!("Ошибка проверки обновлений: {}", e)),
@@ -421,6 +1008,19 @@ fn main() {
             fetch_weather,
             check_for_updates,
             download_and_install_update,
+            storage_get,
+            storage_get_many,
+            storage_set,
+            storage_remove,
+            storage_clear_all,
+            vault_list,
+            vault_list_events,
+            vault_create,
+            vault_update,
+            vault_delete,
+            vault_reveal,
+            vault_log_copy,
+            vault_generate_password,
         ])
         .manage(Arc::new(Mutex::new(AppState::default())));
 

@@ -1,20 +1,20 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "FLOWMODE",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identifier": "com.flowmode.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
-        "title": "FLOWMODE",
-        "width": 1280,
-        "height": 1000,
+        "title": "Flowmode",
+        "width": 1040,
+        "height": 740,
         "resizable": false,
         "fullscreen": false,
         "center": true,
@@ -46,7 +46,7 @@
   "plugins": {
     "updater": {
       "active": true,
-      "dialog": true,
+      "dialog": false,
       "endpoints": [
         "https://github.com/yusheer0/flowmode/releases/latest/download/latest.json"
       ],

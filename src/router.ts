@@ -10,11 +10,7 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/home',
-        },
-        {
-          path: 'home',
-          component: () => import('@/views/HomePage.vue'),
+          component: () => import('@/views/NotesView.vue'),
           name: 'home',
         },
         {
@@ -22,18 +18,10 @@ const router = createRouter({
           component: () => import('@/views/NotesView.vue'),
           name: 'notes',
         },
-        {
-          path: 'settings',
-          component: () => import('@/views/SettingsView.vue'),
-          name: 'settings',
-        },
       ],
     },
-    {
-      path: '/master-password',
-      component: () => import('@/views/MasterPasswordView.vue'),
-      name: 'master-password',
-    },
+    { path: '/home', redirect: '/' },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 

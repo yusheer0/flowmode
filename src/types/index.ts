@@ -80,6 +80,8 @@ export interface ExportData {
   moodEntries: MoodEntry[]
   settings: AppSettings
   notes: Note[]
+  vaultItems?: VaultItem[]
+  vaultEvents?: VaultEvent[]
 }
 
 export interface MasterPasswordSettings {
@@ -91,7 +93,12 @@ export interface MasterPasswordSettings {
 
 export interface Note {
   id: string
+  title: string
   content: string
+  layerId: string
+  layer?: string // Legacy field for old app versions.
+  backgroundColor?: string
+  criticality?: 'low' | 'medium' | 'high'
   createdAt: string
   updatedAt: string
   isImportant?: boolean
@@ -99,8 +106,46 @@ export interface Note {
 }
 
 export type NoteSortOption = 'newest' | 'oldest' | 'important'
+export interface NotesLayer {
+  id: string
+  name: string
+  isDefault: boolean
+  createdAt: string
+}
 
 export interface WeatherSettings {
   city: string
   unit: 'celsius' | 'fahrenheit'
+}
+
+export type VaultEventType = 'created' | 'updated' | 'deleted' | 'revealed' | 'copied_login' | 'copied_password'
+
+export interface VaultEvent {
+  id: string
+  itemId: string
+  type: VaultEventType
+  createdAt: string
+}
+
+export interface VaultItem {
+  id: string
+  title: string
+  service: string
+  username: string
+  passwordMasked: string
+  url?: string
+  notes?: string
+  tags: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VaultItemInput {
+  title: string
+  service: string
+  username: string
+  password: string
+  url?: string
+  notes?: string
+  tags: string[]
 }

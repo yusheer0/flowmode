@@ -1,24 +1,13 @@
-<template>
-  <a-config-provider :theme="themeConfig">
-    <router-view />
-  </a-config-provider>
-</template>
-
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useSettingsStore, useMasterPasswordStore, useNotesStore, useWeatherStore } from '@/stores'
+import { computed, onMounted } from 'vue'
+import { useSettingsStore, useMasterPasswordStore, useNotesStore } from '@/stores'
 
-const router = useRouter()
-const route = useRoute()
 const settingsStore = useSettingsStore()
 const masterPasswordStore = useMasterPasswordStore()
 const notesStore = useNotesStore()
-const weatherStore = useWeatherStore()
-
-const isChecking = ref(true)
 
 const themeConfig = computed(() => {
+  // Dark theme flag
   const isDark = settingsStore.settings.theme === 'dark'
 
   return {
@@ -38,7 +27,7 @@ const themeConfig = computed(() => {
       colorWarning: isDark ? '#d29922' : '#9a6700',
       colorSuccess: isDark ? '#3fb950' : '#1a7f37',
       borderRadius: 6,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif',
+      fontFamily: '"Bitter", serif',
       fontSize: 14,
     },
     components: {
@@ -52,38 +41,15 @@ const themeConfig = computed(() => {
   }
 })
 
-// Проверка необходимости блокировки
-function checkLock(): void {
-  const isPasswordSet = masterPasswordStore.isPasswordSet()
-  const currentPath = route.path
-
-  // Если мы на странице мастер-пароля, не блокируем
-  if (currentPath === '/master-password') {
-    isChecking.value = false
-    return
-  }
-
-  // Если пароль не установлен или не разблокировано - redirect на мастер-пароль
-  // Кроме home страницы - она доступна без разблокировки
-  if (!isPasswordSet || !masterPasswordStore.isUnlocked) {
-    if (currentPath !== '/home' && currentPath !== '/') {
-      router.replace('/master-password')
-    }
-    isChecking.value = false
-  } else {
-    isChecking.value = false
-  }
-}
-
-onMounted(() => {
+onMounted(async () => {
+  await notesStore.init()
+  settingsStore.init()
   masterPasswordStore.init()
-  notesStore.init()
-  weatherStore.init()
-  checkLock()
-})
-
-// Следим за состоянием разблокировки
-watch(() => masterPasswordStore.isUnlocked, () => {
-  checkLock()
 })
 </script>
+
+<template>
+  <a-config-provider :theme="themeConfig">
+    <router-view />
+  </a-config-provider>
+</template>

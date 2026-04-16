@@ -1,0 +1,372 @@
+.vaultView {
+  position: relative;
+  height: 100%;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.searchInput,
+.fieldInput {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--color-text);
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
+}
+
+.primaryButton,
+.ghostButton,
+.dangerButton {
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.primaryButton {
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.ghostButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dangerButton {
+  border: none;
+  background: var(--color-danger);
+  color: var(--color-bg);
+}
+
+.errorBanner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  width: min(640px, calc(100% - 32px));
+  border-radius: 8px;
+  background: var(--color-priority-high);
+  color: var(--color-danger);
+  border: 1px solid var(--color-priority-high-border);
+  padding: 8px 12px;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  padding: 12px 12px 76px;
+  overflow: auto;
+  background-color: var(--color-surface);
+  border-radius: 16px;
+}
+
+.listPane {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+  min-height: 100%;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-bg);
+  padding: 14px;
+  padding-bottom: 44px;
+  min-height: 210px;
+  display: grid;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.cardText {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.cardInfoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cardInfoValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.inlineAction {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
+  background: var(--color-bg);
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: var(--color-surface);
+  }
+}
+
+.actions {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover .actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.cardAction {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: rgba(127, 127, 127, 0.16);
+  }
+}
+
+.cardActionDanger {
+  color: var(--color-danger);
+}
+
+.emptyState {
+  margin: 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 24px;
+}
+
+.historyHint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.unlockError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.resetButton {
+  justify-self: start;
+  border: none;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 13px;
+  padding: 0;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(24, 24, 28, 0.24);
+  z-index: 20;
+  padding: 0;
+}
+
+.topModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 24, 28, 0.24);
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modalCard {
+  width: min(720px, 100%);
+  min-height: 220px;
+  max-height: 80vh;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 18px 18px 0 0;
+  padding: 18px;
+}
+
+.topModalCard {
+  width: min(720px, 100%);
+  border-radius: 18px;
+  max-height: calc(100vh - 72px);
+}
+
+.searchModalCard {
+  width: min(680px, 100%);
+  min-height: 200px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.revealPassword {
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  padding: 10px;
+  font-family: monospace;
+  font-size: 16px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.bottomDock {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  padding-bottom: 0;
+  border-radius: 14px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+}
+
+.dockButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--color-text);
+  display: grid;
+  place-items: center;
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: rgba(127, 127, 127, 0.16);
+  }
+}
+
+.dockButtonActive {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+:global(.sheet-enter-active),
+:global(.sheet-leave-active) {
+  transition: background-color 0.26s ease;
+}
+
+:global(.sheet-enter-active) .modalCard,
+:global(.sheet-leave-active) .modalCard {
+  transition: transform 0.26s ease;
+}
+
+:global(.sheet-enter-from),
+:global(.sheet-leave-to) {
+  background-color: rgba(24, 24, 28, 0);
+}
+
+:global(.sheet-enter-from) .modalCard,
+:global(.sheet-leave-to) .modalCard {
+  transform: translateY(100%);
+}
+
+:global(.sheet-enter-to),
+:global(.sheet-leave-from) {
+  background-color: rgba(24, 24, 28, 0.24);
+}
+
+:global(.top-sheet-enter-active),
+:global(.top-sheet-leave-active) {
+  transition: background-color 0.24s ease;
+}
+
+:global(.top-sheet-enter-active) .topModalCard,
+:global(.top-sheet-leave-active) .topModalCard {
+  transition: transform 0.24s ease, opacity 0.24s ease;
+}
+
+:global(.top-sheet-enter-from),
+:global(.top-sheet-leave-to) {
+  background-color: rgba(24, 24, 28, 0);
+}
+
+:global(.top-sheet-enter-from) .topModalCard,
+:global(.top-sheet-leave-to) .topModalCard {
+  transform: translateY(-28px);
+  opacity: 0;
+}
+
+:global(.top-sheet-enter-to),
+:global(.top-sheet-leave-from) {
+  background-color: rgba(24, 24, 28, 0.24);
+}
+
+:global([data-theme='dark']) .cardAction {
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+:global([data-theme='dark']) .inlineAction {
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+@media (max-width: 960px) {
+  .listPane {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .listPane {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
