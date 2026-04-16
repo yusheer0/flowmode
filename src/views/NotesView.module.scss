@@ -543,6 +543,20 @@
   }
 }
 
+.updateInlineStatus {
+  margin: 0;
+  font-size: 13px;
+  color: #575860;
+}
+
+.updateInlineStatusSuccess {
+  color: #1a7f37;
+}
+
+.updateInlineStatusError {
+  color: #b12525;
+}
+
 .updateSheet {
   min-height: 240px;
 }
@@ -709,6 +723,18 @@
 
 :global([data-theme='dark']) .updateStatus {
   color: #e6edf3;
+}
+
+:global([data-theme='dark']) .updateInlineStatus {
+  color: #9da7b2;
+}
+
+:global([data-theme='dark']) .updateInlineStatusSuccess {
+  color: #3fb950;
+}
+
+:global([data-theme='dark']) .updateInlineStatusError {
+  color: #ff7b72;
 }
 
 :global([data-theme='dark']) .updateMeta {

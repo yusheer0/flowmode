@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Layers3, Pin, Search, Settings, SquarePlus, Trash2, X } from 'lucide-vue-next'
+import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { useNotesStore, useSettingsStore } from '@/stores'
@@ -40,10 +41,13 @@ const isCheckingUpdates = ref(false)
 const isInstallingUpdate = ref(false)
 const updateStatus = ref('')
 const updateError = ref('')
+const settingsUpdateMessage = ref('')
+const settingsUpdateType = ref<'neutral' | 'success' | 'error'>('neutral')
 const updateCurrentVersion = ref('')
 const updateTargetVersion = ref('')
 const updateProgress = ref<number | null>(null)
 const updateDownloadedBytes = ref('')
+const appVersion = ref('')
 let unlistenUpdateProgress: UnlistenFn | null = null
 
 type UpdateCheckResult = {
@@ -227,6 +231,8 @@ async function checkAndInstallUpdate(): Promise<void> {
   if (isCheckingUpdates.value || isInstallingUpdate.value) return
   isUpdateModalOpen.value = true
   updateError.value = ''
+  settingsUpdateMessage.value = t('updateChecking')
+  settingsUpdateType.value = 'neutral'
   updateProgress.value = null
   updateDownloadedBytes.value = ''
   updateTargetVersion.value = ''
@@ -238,11 +244,15 @@ async function checkAndInstallUpdate(): Promise<void> {
     updateCurrentVersion.value = result.currentVersion
     if (!result.available || !result.targetVersion) {
       updateStatus.value = t('updateNotFound')
+      settingsUpdateMessage.value = `${t('updateNotFound')} (${result.currentVersion})`
+      settingsUpdateType.value = 'success'
       return
     }
 
     updateTargetVersion.value = result.targetVersion
     updateStatus.value = `${t('updateFound')}: ${result.targetVersion}`
+    settingsUpdateMessage.value = `${t('updateFound')}: ${result.targetVersion}`
+    settingsUpdateType.value = 'neutral'
     await ensureUpdateProgressListener()
 
     isInstallingUpdate.value = true
@@ -251,9 +261,22 @@ async function checkAndInstallUpdate(): Promise<void> {
     updateStatus.value = t('updateInstalling')
   } catch (error) {
     updateError.value = `${t('updateError')}: ${String(error)}`
+    settingsUpdateMessage.value = updateError.value
+    settingsUpdateType.value = 'error'
   } finally {
     isCheckingUpdates.value = false
     isInstallingUpdate.value = false
+  }
+}
+
+async function loadAppVersion(): Promise<void> {
+  try {
+    const version = await getVersion()
+    appVersion.value = version
+    updateCurrentVersion.value = version
+  } catch (error) {
+    console.error('Не удалось получить версию приложения:', error)
+    appVersion.value = ''
   }
 }
 
@@ -339,7 +362,7 @@ function switchView(view: 'notes' | 'vault'): void {
 }
 
 onMounted(async () => {
-  await Promise.all([settingsStore.init(), notesStore.init()])
+  await Promise.all([settingsStore.init(), notesStore.init(), loadAppVersion()])
 
   if (hasNoLayers.value) {
     openLayerModal()
@@ -631,6 +654,9 @@ onBeforeUnmount(() => {
           </div>
           <div :class="$style.settingsGroup">
             <span :class="$style.settingsLabel">{{ t('updateSetting') }}</span>
+            <p :class="$style.updateMeta">
+              {{ t('updateCurrentVersion') }}: {{ appVersion || '—' }}
+            </p>
             <button
               type="button"
               :class="$style.updateButton"
@@ -639,6 +665,18 @@ onBeforeUnmount(() => {
             >
               {{ t('updateNowButton') }}
             </button>
+            <p
+              v-if="settingsUpdateMessage"
+              :class="[
+                $style.updateInlineStatus,
+                {
+                  [$style.updateInlineStatusSuccess]: settingsUpdateType === 'success',
+                  [$style.updateInlineStatusError]: settingsUpdateType === 'error',
+                },
+              ]"
+            >
+              {{ settingsUpdateMessage }}
+            </p>
           </div>
         </div>
       </div>

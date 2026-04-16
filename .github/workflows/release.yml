@@ -2,8 +2,6 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
@@ -27,6 +25,56 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve release notes from CHANGELOG
+        shell: bash
+        run: |
+          python <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          changelog_path = pathlib.Path("CHANGELOG.md")
+          tag_name = os.environ.get("GITHUB_REF_NAME", "").strip()
+          version = tag_name[1:] if tag_name.startswith("v") else tag_name
+          release_name = f"FLOWMODE {tag_name}"
+          fallback_body = (
+              "Описание релиза не найдено в CHANGELOG.md.\n\n"
+              f"Добавьте секцию `## [{version}]` и повторите выпуск."
+          )
+
+          body = fallback_body
+          if changelog_path.exists():
+              text = changelog_path.read_text(encoding="utf-8")
+              lines = text.splitlines()
+              pattern = re.compile(
+                  rf"^##\s+\[?v?{re.escape(version)}\]?(?:\s+-\s+.*)?\s*$",
+                  re.IGNORECASE,
+              )
+              start_idx = -1
+              for idx, line in enumerate(lines):
+                  if pattern.match(line.strip()):
+                      start_idx = idx + 1
+                      break
+
+              if start_idx != -1:
+                  end_idx = len(lines)
+                  for idx in range(start_idx, len(lines)):
+                      if re.match(r"^##\s+", lines[idx].strip()):
+                          end_idx = idx
+                          break
+                  section = "\n".join(lines[start_idx:end_idx]).strip()
+                  if section:
+                      body = section
+
+          env_file = os.environ["GITHUB_ENV"]
+          with open(env_file, "a", encoding="utf-8") as f:
+              f.write(f"RELEASE_NAME={release_name}\n")
+              f.write("RELEASE_BODY<<EOF\n")
+              f.write(body)
+              f.write("\nEOF\n")
+          PY
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -59,8 +107,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'FLOWMODE ${{ github.ref_name }}'
-          releaseBody: 'Смотрите changelog для подробностей.'
+          releaseName: ${{ env.RELEASE_NAME }}
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
