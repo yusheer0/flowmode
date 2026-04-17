@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Layers3, Heart, Search, Settings, SquarePlus, Trash2, X } from 'lucide-vue-next'
-import { getVersion } from '@tauri-apps/api/app'
-import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { computed, onMounted, ref } from 'vue'
+import { Layers3, Heart, Search, Cog, SquarePlus, Trash2, X } from 'lucide-vue-next'
 import { useNotesStore, useSettingsStore } from '@/stores'
 import type { Note } from '@/types'
+import SheetModal from '@/components/SheetModal.vue'
+import { useAppUpdater } from '@/composables/useAppUpdater'
 import VaultView from '@/views/VaultView.vue'
 import { TRANSLATIONS } from '@/translations/translations'
 
@@ -23,7 +22,6 @@ const isSearchModalOpen = ref(false)
 const isSettingsModalOpen = ref(false)
 const isLayerModalOpen = ref(false)
 const isCreateModalOpen = ref(false)
-const isUpdateModalOpen = ref(false)
 const newNoteTitle = ref('')
 const newNoteBody = ref('')
 const selectedCreateCriticality = ref<Note['criticality'] | ''>('')
@@ -37,31 +35,6 @@ const pendingDeleteNoteId = ref<string | null>(null)
 const pendingDeleteFromEditModal = ref(false)
 const newLayerName = ref('')
 const layerFormError = ref('')
-const isCheckingUpdates = ref(false)
-const isInstallingUpdate = ref(false)
-const updateStatus = ref('')
-const updateError = ref('')
-const settingsUpdateMessage = ref('')
-const settingsUpdateType = ref<'neutral' | 'success' | 'error'>('neutral')
-const updateCurrentVersion = ref('')
-const updateTargetVersion = ref('')
-const updateProgress = ref<number | null>(null)
-const updateDownloadedBytes = ref('')
-const appVersion = ref('')
-let unlistenUpdateProgress: UnlistenFn | null = null
-
-type UpdateCheckResult = {
-  available: boolean
-  currentVersion: string
-  targetVersion: string | null
-}
-
-type UpdateDownloadProgress = {
-  downloaded: number
-  contentLength: number | null
-  progress: number | null
-  version: string
-}
 
 const sortedNotes = computed(() => notesStore.sortNotes(notesStore.getActiveNotesByLayer(), 'important'))
 const filteredNotes = computed(() => {
@@ -79,6 +52,7 @@ const canSubmitLayer = computed(() => canCreateCustomLayer.value && newLayerName
 const hasNoLayers = computed(() => notesStore.layers.length === 0)
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
+const translateForUpdater = (key: string): string => t(key as keyof typeof TRANSLATIONS.en)
 const CRITICALITY_OPTIONS = computed(() => [
   { value: 'low', label: t('criticalityLow') },
   { value: 'medium', label: t('criticalityMedium') },
@@ -87,6 +61,23 @@ const CRITICALITY_OPTIONS = computed(() => [
 const activeLayerLabel = computed(() => {
   return notesStore.getLayerName(notesStore.activeLayerId) || t('noLayerSelected')
 })
+const {
+  appVersion,
+  checkAndInstallUpdate,
+  closeUpdateModal,
+  isCheckingUpdates,
+  isInstallingUpdate,
+  isUpdateModalOpen,
+  loadAppVersion,
+  settingsUpdateMessage,
+  settingsUpdateType,
+  updateCurrentVersion,
+  updateDownloadedBytes,
+  updateError,
+  updateProgress,
+  updateStatus,
+  updateTargetVersion,
+} = useAppUpdater(translateForUpdater)
 
 function openCreateModal(): void {
   if (hasNoLayers.value) {
@@ -135,11 +126,6 @@ function openSettingsModal(): void {
 
 function closeSettingsModal(): void {
   isSettingsModalOpen.value = false
-}
-
-function closeUpdateModal(): void {
-  if (isInstallingUpdate.value) return
-  isUpdateModalOpen.value = false
 }
 
 function openLayerModal(): void {
@@ -202,82 +188,6 @@ function updateLanguage(value: 'ru' | 'en'): void {
 
 function updateTheme(value: 'light' | 'dark'): void {
   settingsStore.updateSettings({ theme: value })
-}
-
-function formatBytes(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB']
-  if (bytes <= 0) return `0 ${units[0]}`
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
-  const normalized = bytes / (1024 ** index)
-  const fractionDigits = index === 0 ? 0 : 1
-  return `${normalized.toFixed(fractionDigits)} ${units[index]}`
-}
-
-async function ensureUpdateProgressListener(): Promise<void> {
-  if (unlistenUpdateProgress) return
-  unlistenUpdateProgress = await listen<UpdateDownloadProgress>('update_download_progress', (event) => {
-    const payload = event.payload
-    updateTargetVersion.value = payload.version
-    updateProgress.value = payload.progress === null ? null : Math.min(Math.max(payload.progress, 0), 100)
-    if (payload.contentLength && payload.contentLength > 0) {
-      updateDownloadedBytes.value = `${formatBytes(payload.downloaded)} / ${formatBytes(payload.contentLength)}`
-    } else {
-      updateDownloadedBytes.value = formatBytes(payload.downloaded)
-    }
-  })
-}
-
-async function checkAndInstallUpdate(): Promise<void> {
-  if (isCheckingUpdates.value || isInstallingUpdate.value) return
-  isUpdateModalOpen.value = true
-  updateError.value = ''
-  settingsUpdateMessage.value = t('updateChecking')
-  settingsUpdateType.value = 'neutral'
-  updateProgress.value = null
-  updateDownloadedBytes.value = ''
-  updateTargetVersion.value = ''
-  updateStatus.value = t('updateChecking')
-  isCheckingUpdates.value = true
-
-  try {
-    const result = await invoke<UpdateCheckResult>('check_for_updates')
-    updateCurrentVersion.value = result.currentVersion
-    if (!result.available || !result.targetVersion) {
-      updateStatus.value = t('updateNotFound')
-      settingsUpdateMessage.value = `${t('updateNotFound')} (${result.currentVersion})`
-      settingsUpdateType.value = 'success'
-      return
-    }
-
-    updateTargetVersion.value = result.targetVersion
-    updateStatus.value = `${t('updateFound')}: ${result.targetVersion}`
-    settingsUpdateMessage.value = `${t('updateFound')}: ${result.targetVersion}`
-    settingsUpdateType.value = 'neutral'
-    await ensureUpdateProgressListener()
-
-    isInstallingUpdate.value = true
-    updateStatus.value = t('updateDownloading')
-    await invoke<void>('download_and_install_update')
-    updateStatus.value = t('updateInstalling')
-  } catch (error) {
-    updateError.value = `${t('updateError')}: ${String(error)}`
-    settingsUpdateMessage.value = updateError.value
-    settingsUpdateType.value = 'error'
-  } finally {
-    isCheckingUpdates.value = false
-    isInstallingUpdate.value = false
-  }
-}
-
-async function loadAppVersion(): Promise<void> {
-  try {
-    const version = await getVersion()
-    appVersion.value = version
-    updateCurrentVersion.value = version
-  } catch (error) {
-    console.error('Не удалось получить версию приложения:', error)
-    appVersion.value = ''
-  }
 }
 
 function closeSecondarySheets(): void {
@@ -369,12 +279,6 @@ onMounted(async () => {
     return
   }
 })
-
-onBeforeUnmount(() => {
-  if (!unlistenUpdateProgress) return
-  void unlistenUpdateProgress()
-  unlistenUpdateProgress = null
-})
 </script>
 
 <template>
@@ -417,375 +321,382 @@ onBeforeUnmount(() => {
       @close="switchView('notes')"
     />
 
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div v-if="isCreateModalOpen" :class="$style.modalOverlay">
-        <div :class="$style.modalSheet">
-          <button :class="$style.modalClose" type="button" title="Закрыть" @click="closeCreateModal">
-            <X :size="18" />
-          </button>
-
-          <h2 :class="$style.modalTitle">{{ t('newNoteTitle') }}</h2>
-          <input
-            v-model.trim="newNoteTitle"
-            :class="$style.modalInput"
-            :placeholder="t('noteTitlePlaceholder')"
-          />
-          <textarea
-            v-model.trim="newNoteBody"
-            :class="$style.modalTextarea"
-            :placeholder="t('noteBodyPlaceholder')"
-            autofocus
-          />
-          <div :class="$style.criticalityPicker">
-            <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
-            <div
-              :class="$style.criticalityOptions"
-              role="radiogroup"
-              :aria-label="t('criticalityLabel')"
-            >
-              <button
-                v-for="option in CRITICALITY_OPTIONS"
-                :key="option.value"
-                type="button"
-                :class="[
-                  $style.criticalityOption,
-                  {
-                    [$style.criticalityOptionLow]: option.value === 'low',
-                    [$style.criticalityOptionMedium]: option.value === 'medium',
-                    [$style.criticalityOptionHigh]: option.value === 'high',
-                  },
-                  {
-                    [$style.criticalityOptionActive]:
-                      selectedCreateCriticality === option.value,
-                  },
-                ]"
-                role="radio"
-                :aria-checked="selectedCreateCriticality === option.value"
-                @click="selectedCreateCriticality = option.value"
-              >
-                <span>{{ option.label }}</span>
-              </button>
-            </div>
-          </div>
-
-          <button
-            :class="$style.modalCreateButton"
-            type="button"
-            :disabled="!isCreateEnabled"
-            @click="createNote"
-          >
-            {{ t('createButton') }}
-          </button>
-        </div>
-      </div>
-    </transition>
-
-    <transition v-if="activeView === 'notes'" name="top-sheet">
-      <div v-if="isEditModalOpen" :class="$style.topModalOverlay">
-        <div :class="[$style.modalSheet, $style.topModalSheet]">
-          <button :class="$style.modalClose" type="button" title="Закрыть" @click="closeEditModal">
-            <X :size="18" />
-          </button>
-
-          <h2 :class="$style.modalTitle">{{ t('editNoteTitle') }}</h2>
-          <input
-            v-model.trim="editNoteTitle"
-            :class="$style.modalInput"
-            :placeholder="t('noteTitlePlaceholder')"
-          />
-          <textarea
-            v-model.trim="editNoteBody"
-            :class="$style.modalTextarea"
-            :placeholder="t('noteBodyPlaceholder')"
-            autofocus
-          />
-          <div :class="$style.criticalityPicker">
-            <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
-            <div
-              :class="$style.criticalityOptions"
-              role="radiogroup"
-              :aria-label="t('criticalityLabel')"
-            >
-              <button
-                v-for="option in CRITICALITY_OPTIONS"
-                :key="`edit-${option.value}`"
-                type="button"
-                :class="[
-                  $style.criticalityOption,
-                  {
-                    [$style.criticalityOptionLow]: option.value === 'low',
-                    [$style.criticalityOptionMedium]: option.value === 'medium',
-                    [$style.criticalityOptionHigh]: option.value === 'high',
-                  },
-                  {
-                    [$style.criticalityOptionActive]:
-                      editNoteCriticality === option.value,
-                  },
-                ]"
-                role="radio"
-                :aria-checked="editNoteCriticality === option.value"
-                @click="editNoteCriticality = option.value"
-              >
-                <span>{{ option.label }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div :class="$style.editModalActions">
-            <button
-              :class="$style.modalDeleteButton"
-              type="button"
-              @click="deleteEditedNote"
-            >
-              {{ t('deleteButton') }}
-            </button>
-            <button
-              :class="$style.modalSaveButton"
-              type="button"
-              :disabled="!isEditEnabled"
-              @click="saveEditedNote"
-            >
-              {{ t('saveButton') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div
-        v-if="isDeleteConfirmModalOpen"
-        :class="[$style.modalOverlay, $style.deleteConfirmOverlay]"
-        @click.self="closeDeleteNoteConfirm"
+    <!-- Create Modal -->
+    <template v-if="activeView === 'notes'">
+      <SheetModal
+        :is-open="isCreateModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="$style.modalSheet"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('newNoteTitle')"
+        :close-title="t('close')"
+        :close-on-overlay="false"
+        @close="closeCreateModal"
       >
-        <div :class="$style.modalSheet">
-          <h2 :class="$style.modalTitle">{{ t('deleteConfirmTitle') }}</h2>
-          <p :class="$style.confirmMessage">{{ t('deleteConfirmMessage') }}</p>
-          <div :class="$style.confirmActions">
-            <button :class="$style.modalCancelButton" type="button" @click="closeDeleteNoteConfirm">
-              {{ t('cancelButton') }}
-            </button>
-            <button :class="$style.modalDeleteButton" type="button" @click="confirmDeleteNote">
-              {{ t('deleteButton') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div v-if="isSearchModalOpen" :class="$style.modalOverlay" @click.self="closeSearchModal">
-        <div :class="[$style.modalSheet, $style.searchSheet]">
-          <button :class="$style.modalClose" type="button" title="Закрыть" @click="closeSearchModal">
-            <X :size="18" />
-          </button>
-
-          <h2 :class="$style.modalTitle">{{ t('searchTitle') }}</h2>
-          <div :class="$style.searchField">
-            <Search :size="16" />
-            <input
-              v-model.trim="searchQuery"
-              :class="$style.searchInput"
-              :placeholder="t('searchPlaceholder')"
-              autofocus
-            />
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div v-if="isSettingsModalOpen" :class="$style.modalOverlay" @click.self="closeSettingsModal">
-        <div :class="[$style.modalSheet, $style.settingsSheet]">
-          <button :class="$style.modalClose" type="button" :title="t('close')" @click="closeSettingsModal">
-            <X :size="18" />
-          </button>
-
-          <h2 :class="$style.modalTitle">{{ t('settingsTitle') }}</h2>
-          <div :class="$style.settingsGroup">
-            <span :class="$style.settingsLabel">{{ t('languageSetting') }}</span>
-            <div :class="$style.settingsOptions">
-              <button
-                type="button"
-                :class="[
-                  $style.settingsOption,
-                  { [$style.settingsOptionActive]: settingsStore.settings.language === 'ru' },
-                ]"
-                @click="updateLanguage('ru')"
-              >
-                Русский
-              </button>
-              <button
-                type="button"
-                :class="[
-                  $style.settingsOption,
-                  { [$style.settingsOptionActive]: settingsStore.settings.language === 'en' },
-                ]"
-                @click="updateLanguage('en')"
-              >
-                English
-              </button>
-            </div>
-          </div>
-          <div :class="$style.settingsGroup">
-            <span :class="$style.settingsLabel">{{ t('themeSetting') }}</span>
-            <div :class="$style.settingsOptions">
-              <button
-                type="button"
-                :class="[
-                  $style.settingsOption,
-                  { [$style.settingsOptionActive]: settingsStore.settings.theme === 'light' },
-                ]"
-                @click="updateTheme('light')"
-              >
-                {{ t('themeLight') }}
-              </button>
-              <button
-                type="button"
-                :class="[
-                  $style.settingsOption,
-                  { [$style.settingsOptionActive]: settingsStore.settings.theme === 'dark' },
-                ]"
-                @click="updateTheme('dark')"
-              >
-                {{ t('themeDark') }}
-              </button>
-            </div>
-          </div>
-          <div :class="$style.settingsGroup">
-            <span :class="$style.settingsLabel">{{ t('updateSetting') }}</span>
-            <p :class="$style.updateMeta">
-              {{ t('updateCurrentVersion') }}: {{ appVersion || '—' }}
-            </p>
+        <input
+          v-model.trim="newNoteTitle"
+          :class="$style.modalInput"
+          :placeholder="t('noteTitlePlaceholder')"
+        />
+        <textarea
+          v-model.trim="newNoteBody"
+          :class="$style.modalTextarea"
+          :placeholder="t('noteBodyPlaceholder')"
+          autofocus
+        />
+        <div :class="$style.criticalityPicker">
+          <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
+          <div
+            :class="$style.criticalityOptions"
+            role="radiogroup"
+            :aria-label="t('criticalityLabel')"
+          >
             <button
+              v-for="option in CRITICALITY_OPTIONS"
+              :key="option.value"
               type="button"
-              :class="$style.updateButton"
-              :disabled="isCheckingUpdates || isInstallingUpdate"
-              @click="checkAndInstallUpdate"
-            >
-              {{ t('updateNowButton') }}
-            </button>
-            <p
-              v-if="settingsUpdateMessage"
               :class="[
-                $style.updateInlineStatus,
+                $style.criticalityOption,
                 {
-                  [$style.updateInlineStatusSuccess]: settingsUpdateType === 'success',
-                  [$style.updateInlineStatusError]: settingsUpdateType === 'error',
+                  [$style.criticalityOptionLow]: option.value === 'low',
+                  [$style.criticalityOptionMedium]: option.value === 'medium',
+                  [$style.criticalityOptionHigh]: option.value === 'high',
+                },
+                {
+                  [$style.criticalityOptionActive]:
+                    selectedCreateCriticality === option.value,
                 },
               ]"
+              role="radio"
+              :aria-checked="selectedCreateCriticality === option.value"
+              @click="selectedCreateCriticality = option.value"
             >
-              {{ settingsUpdateMessage }}
-            </p>
+              <span>{{ option.label }}</span>
+            </button>
           </div>
         </div>
-      </div>
-    </transition>
 
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div v-if="isUpdateModalOpen" :class="$style.modalOverlay" @click.self="closeUpdateModal">
-        <div :class="[$style.modalSheet, $style.updateSheet]">
-          <button
-            :class="$style.modalClose"
-            type="button"
-            :title="t('close')"
-            :disabled="isInstallingUpdate"
-            @click="closeUpdateModal"
+        <button
+          :class="$style.modalCreateButton"
+          type="button"
+          :disabled="!isCreateEnabled"
+          @click="createNote"
+        >
+          {{ t('createButton') }}
+        </button>
+      </SheetModal>
+
+      <!-- Edit Modal -->
+      <SheetModal
+        :is-open="isEditModalOpen"
+        transition-name="top-sheet"
+        :overlay-class="$style.topModalOverlay"
+        :sheet-class="[$style.modalSheet, $style.topModalSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('editNoteTitle')"
+        :close-title="t('close')"
+        :close-on-overlay="false"
+        @close="closeEditModal"
+      >
+        <input
+          v-model.trim="editNoteTitle"
+          :class="$style.modalInput"
+          :placeholder="t('noteTitlePlaceholder')"
+        />
+        <textarea
+          v-model.trim="editNoteBody"
+          :class="$style.modalTextarea"
+          :placeholder="t('noteBodyPlaceholder')"
+          autofocus
+        />
+        <div :class="$style.criticalityPicker">
+          <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
+          <div
+            :class="$style.criticalityOptions"
+            role="radiogroup"
+            :aria-label="t('criticalityLabel')"
           >
-            <X :size="18" />
-          </button>
-
-          <h2 :class="$style.modalTitle">{{ t('updateModalTitle') }}</h2>
-          <p :class="$style.updateStatus">{{ updateStatus }}</p>
-          <p v-if="updateError" :class="$style.updateError">{{ updateError }}</p>
-          <p v-if="updateCurrentVersion" :class="$style.updateMeta">
-            {{ t('updateCurrentVersion') }}: {{ updateCurrentVersion }}
-          </p>
-          <p v-if="updateTargetVersion" :class="$style.updateMeta">
-            {{ t('updateTargetVersion') }}: {{ updateTargetVersion }}
-          </p>
-          <p :class="$style.updateMeta">
-            {{ t('updateRestartHint') }}
-          </p>
-          <div v-if="updateProgress !== null" :class="$style.updateProgressWrap">
-            <div :class="$style.updateProgressTrack">
-              <div :class="$style.updateProgressValue" :style="{ width: `${updateProgress}%` }"></div>
-            </div>
-            <p :class="$style.updateMeta">
-              {{ t('updateDownloadProgress') }}: {{ updateProgress.toFixed(0) }}%
-              <span v-if="updateDownloadedBytes">({{ updateDownloadedBytes }})</span>
-            </p>
+            <button
+              v-for="option in CRITICALITY_OPTIONS"
+              :key="`edit-${option.value}`"
+              type="button"
+              :class="[
+                $style.criticalityOption,
+                {
+                  [$style.criticalityOptionLow]: option.value === 'low',
+                  [$style.criticalityOptionMedium]: option.value === 'medium',
+                  [$style.criticalityOptionHigh]: option.value === 'high',
+                },
+                {
+                  [$style.criticalityOptionActive]:
+                    editNoteCriticality === option.value,
+                },
+              ]"
+              role="radio"
+              :aria-checked="editNoteCriticality === option.value"
+              @click="editNoteCriticality = option.value"
+            >
+              <span>{{ option.label }}</span>
+            </button>
           </div>
         </div>
-      </div>
-    </transition>
 
-    <transition v-if="activeView === 'notes'" name="sheet">
-      <div v-if="isLayerModalOpen" :class="$style.modalOverlay" @click.self="closeLayerModal">
-        <div :class="[$style.modalSheet, $style.layerSheet]">
-          <button :class="$style.modalClose" type="button" title="Закрыть" @click="closeLayerModal">
-            <X :size="18" />
+        <div :class="$style.editModalActions">
+          <button
+            :class="$style.modalDeleteButton"
+            type="button"
+            @click="deleteEditedNote"
+          >
+            {{ t('deleteButton') }}
           </button>
+          <button
+            :class="$style.modalSaveButton"
+            type="button"
+            :disabled="!isEditEnabled"
+            @click="saveEditedNote"
+          >
+            {{ t('saveButton') }}
+          </button>
+        </div>
+      </SheetModal>
 
-          <h2 :class="$style.modalTitle">{{ t('layersTitle') }}</h2>
-          <div :class="$style.layerButtons">
-            <div
-              v-for="layer in notesStore.layers"
-              :key="layer.id"
+      <!-- Delete Confirm Modal -->
+      <SheetModal
+        :is-open="isDeleteConfirmModalOpen"
+        :overlay-class="[$style.modalOverlay, $style.deleteConfirmOverlay]"
+        :sheet-class="$style.modalSheet"
+        :title-class="$style.modalTitle"
+        :title="t('deleteConfirmTitle')"
+        :show-close="false"
+        @close="closeDeleteNoteConfirm"
+      >
+        <p :class="$style.confirmMessage">{{ t('deleteConfirmMessage') }}</p>
+        <div :class="$style.confirmActions">
+          <button :class="$style.modalCancelButton" type="button" @click="closeDeleteNoteConfirm">
+            {{ t('cancelButton') }}
+          </button>
+          <button :class="$style.modalDeleteButton" type="button" @click="confirmDeleteNote">
+            {{ t('deleteButton') }}
+          </button>
+        </div>
+      </SheetModal>
+
+      <!-- Search Modal -->
+      <SheetModal
+        :is-open="isSearchModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="[$style.modalSheet, $style.searchSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('searchTitle')"
+        :close-title="t('close')"
+        @close="closeSearchModal"
+      >
+        <div :class="$style.searchField">
+          <Search :size="16" />
+          <input
+            v-model.trim="searchQuery"
+            :class="$style.searchInput"
+            :placeholder="t('searchPlaceholder')"
+            autofocus
+          />
+        </div>
+      </SheetModal>
+
+      <!-- Settings Modal -->
+      <SheetModal
+        :is-open="isSettingsModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="[$style.modalSheet, $style.settingsSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('settingsTitle')"
+        :close-title="t('close')"
+        @close="closeSettingsModal"
+      >
+        <div :class="$style.settingsGroup">
+          <span :class="$style.settingsLabel">{{ t('languageSetting') }}</span>
+          <div :class="$style.settingsOptions">
+            <button
+              type="button"
+              :class="[
+                $style.settingsOption,
+                { [$style.settingsOptionActive]: settingsStore.settings.language === 'ru' },
+              ]"
+              @click="updateLanguage('ru')"
             >
-              <div :class="$style.layerRow">
-                <button
-                  :class="[
-                    $style.layerOption,
-                    { [$style.layerOptionActive]: layer.id === notesStore.activeLayerId }
-                  ]"
-                  type="button"
-                  @click="selectLayer(layer.id)"
-                >
-                  {{ layer.name }}
-                </button>
-                <button
-                  :class="$style.layerDeleteButton"
-                  type="button"
-                  :title="t('deleteButton')"
-                  :disabled="notesStore.layers.length <= 1"
-                  @click="deleteLayer(layer.id)"
-                >
-                  <X :size="18" />
-                </button>
-              </div>
-            </div>
+              Русский
+            </button>
+            <button
+              type="button"
+              :class="[
+                $style.settingsOption,
+                { [$style.settingsOptionActive]: settingsStore.settings.language === 'en' },
+              ]"
+              @click="updateLanguage('en')"
+            >
+              English
+            </button>
           </div>
+        </div>
+        <div :class="$style.settingsGroup">
+          <span :class="$style.settingsLabel">{{ t('themeSetting') }}</span>
+          <div :class="$style.settingsOptions">
+            <button
+              type="button"
+              :class="[
+                $style.settingsOption,
+                { [$style.settingsOptionActive]: settingsStore.settings.theme === 'light' },
+              ]"
+              @click="updateTheme('light')"
+            >
+              {{ t('themeLight') }}
+            </button>
+            <button
+              type="button"
+              :class="[
+                $style.settingsOption,
+                { [$style.settingsOptionActive]: settingsStore.settings.theme === 'dark' },
+              ]"
+              @click="updateTheme('dark')"
+            >
+              {{ t('themeDark') }}
+            </button>
+          </div>
+        </div>
+        <div :class="$style.settingsGroup">
+          <span :class="$style.settingsLabel">{{ t('updateSetting') }}</span>
+          <p :class="$style.updateMeta">
+            {{ t('updateCurrentVersion') }}: {{ appVersion || '—' }}
+          </p>
+          <button
+            type="button"
+            :class="$style.updateButton"
+            :disabled="isCheckingUpdates || isInstallingUpdate"
+            @click="checkAndInstallUpdate"
+          >
+            {{ t('updateNowButton') }}
+          </button>
+          <p
+            v-if="settingsUpdateMessage"
+            :class="[
+              $style.updateInlineStatus,
+              {
+                [$style.updateInlineStatusSuccess]: settingsUpdateType === 'success',
+                [$style.updateInlineStatusError]: settingsUpdateType === 'error',
+              },
+            ]"
+          >
+            {{ settingsUpdateMessage }}
+          </p>
+        </div>
+      </SheetModal>
 
-          <div :class="$style.layerCreate">
-            <span :class="$style.layerCreateLabel">
-              {{ t('layersCount') }}: {{ customLayersCount }}/{{ notesStore.MAX_CUSTOM_LAYERS }}
-            </span>
-            <div :class="$style.layerCreateControls">
-              <input
-                v-model.trim="newLayerName"
-                :class="$style.layerCreateInput"
-                :disabled="!canCreateCustomLayer"
-                :placeholder="t('newLayerPlaceholder')"
-              />
+      <!-- Update Modal -->
+      <SheetModal
+        :is-open="isUpdateModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="[$style.modalSheet, $style.updateSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('updateModalTitle')"
+        :close-title="t('close')"
+        :close-disabled="isInstallingUpdate"
+        @close="closeUpdateModal"
+      >
+        <p :class="$style.updateStatus">{{ updateStatus }}</p>
+        <p v-if="updateError" :class="$style.updateError">{{ updateError }}</p>
+        <p v-if="updateCurrentVersion" :class="$style.updateMeta">
+          {{ t('updateCurrentVersion') }}: {{ updateCurrentVersion }}
+        </p>
+        <p v-if="updateTargetVersion" :class="$style.updateMeta">
+          {{ t('updateTargetVersion') }}: {{ updateTargetVersion }}
+        </p>
+        <p :class="$style.updateMeta">
+          {{ t('updateRestartHint') }}
+        </p>
+        <div v-if="updateProgress !== null" :class="$style.updateProgressWrap">
+          <div :class="$style.updateProgressTrack">
+            <div :class="$style.updateProgressValue" :style="{ width: `${updateProgress}%` }"></div>
+          </div>
+          <p :class="$style.updateMeta">
+            {{ t('updateDownloadProgress') }}: {{ updateProgress.toFixed(0) }}%
+            <span v-if="updateDownloadedBytes">({{ updateDownloadedBytes }})</span>
+          </p>
+        </div>
+      </SheetModal>
+
+      <!-- Layer Modal -->
+      <SheetModal
+        :is-open="isLayerModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="[$style.modalSheet, $style.layerSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('layersTitle')"
+        :close-title="t('close')"
+        @close="closeLayerModal"
+      >
+        <div :class="$style.layerButtons">
+          <div
+            v-for="layer in notesStore.layers"
+            :key="layer.id"
+          >
+            <div :class="$style.layerRow">
               <button
-                :class="$style.layerCreateButton"
+                :class="[
+                  $style.layerOption,
+                  { [$style.layerOptionActive]: layer.id === notesStore.activeLayerId }
+                ]"
                 type="button"
-                :disabled="!canSubmitLayer"
-                @click="createLayer"
+                @click="selectLayer(layer.id)"
               >
-                {{ t('createButton') }}
+                {{ layer.name }}
+              </button>
+              <button
+                :class="$style.layerDeleteButton"
+                type="button"
+                :title="t('deleteButton')"
+                :disabled="notesStore.layers.length <= 1"
+                @click="deleteLayer(layer.id)"
+              >
+                <X :size="18" />
               </button>
             </div>
-            <p v-if="!canCreateCustomLayer" :class="$style.layerHint">
-              {{ t('customLayerLimitReached') }}
-            </p>
-            <p v-if="layerFormError" :class="$style.layerError">{{ layerFormError }}</p>
           </div>
         </div>
-      </div>
-    </transition>
 
+        <div :class="$style.layerCreate">
+          <span :class="$style.layerCreateLabel">
+            {{ t('layersCount') }}: {{ customLayersCount }}/{{ notesStore.MAX_CUSTOM_LAYERS }}
+          </span>
+          <div :class="$style.layerCreateControls">
+            <input
+              v-model.trim="newLayerName"
+              :class="$style.layerCreateInput"
+              :disabled="!canCreateCustomLayer"
+              :placeholder="t('newLayerPlaceholder')"
+            />
+            <button
+              :class="$style.layerCreateButton"
+              type="button"
+              :disabled="!canSubmitLayer"
+              @click="createLayer"
+            >
+              {{ t('createButton') }}
+            </button>
+          </div>
+          <p v-if="!canCreateCustomLayer" :class="$style.layerHint">
+            {{ t('customLayerLimitReached') }}
+          </p>
+          <p v-if="layerFormError" :class="$style.layerError">{{ layerFormError }}</p>
+        </div>
+      </SheetModal>
+    </template>
+
+    <!-- View Dock -->
     <nav :class="$style.viewDock">
       <button
         :class="[$style.viewButton, { [$style.viewButtonActive]: activeView === 'notes' }]"
@@ -803,6 +714,7 @@ onBeforeUnmount(() => {
       </button>
     </nav>
 
+    <!-- Bottom Dock -->
     <nav v-if="activeView === 'notes'" :class="$style.bottomDock">
       <button
         :class="$style.dockButton"
@@ -835,9 +747,16 @@ onBeforeUnmount(() => {
         :title="t('settingsTitle')"
         @click="openSettingsModal"
       >
-        <Settings :size="20" />
+        <Cog :size="20" />
       </button>
     </nav>
+
+    <div v-if="activeView === 'notes'" :class="$style.layerStatusDock">
+      <div :class="$style.layerStatusWrapper">
+        <Layers3 :size="18" color="#ffffff" />
+        <strong :class="$style.layerStatusValue">{{ activeLayerLabel }}</strong>
+      </div>
+    </div>
   </section>
 </template>
 

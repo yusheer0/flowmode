@@ -13,6 +13,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,12 +26,14 @@ struct TelegramMessage {
 #[derive(Clone, Serialize, Deserialize)]
 struct AppState {
     minimize_on_close: bool,
+    tray_hint_shown: bool,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            minimize_on_close: false,
+            minimize_on_close: true,
+            tray_hint_shown: false,
         }
     }
 }
@@ -1015,6 +1018,22 @@ async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String
     }
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_skip_taskbar(false);
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn hide_main_window_to_tray(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_skip_taskbar(true);
+        let _ = window.hide();
+    }
+}
+
 fn main() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -1062,11 +1081,7 @@ fn main() {
             .tooltip("FLOWMODE - Ежедневник")
             .on_menu_event(move |app, event| match event.id.as_ref() {
                 "show" => {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.unminimize();
-                        let _ = window.set_focus();
-                    }
+                    show_main_window(app);
                 }
                 "quit" => {
                     std::process::exit(0);
@@ -1081,11 +1096,7 @@ fn main() {
                 } = event
                 {
                     let app = tray.app_handle();
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.unminimize();
-                        let _ = window.set_focus();
-                    }
+                    show_main_window(app);
                 }
             })
             .build(app)?;
@@ -1096,16 +1107,30 @@ fn main() {
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     let state = app_handle_for_window.state::<Arc<Mutex<AppState>>>();
-                    let app_state = state.lock().unwrap();
-
-                    if app_state.minimize_on_close {
-                        api.prevent_close();
-                        if let Some(win) = app_handle_for_window.get_webview_window("main") {
-                            let _ = win.minimize();
+                    let (hide_to_tray, show_tray_hint) = {
+                        let mut app_state = state.lock().unwrap();
+                        if app_state.minimize_on_close {
+                            let should_show_hint = !app_state.tray_hint_shown;
+                            if should_show_hint {
+                                app_state.tray_hint_shown = true;
+                            }
+                            (true, should_show_hint)
+                        } else {
+                            (false, false)
                         }
-                    } else {
-                        if let Some(win) = app_handle_for_window.get_webview_window("main") {
-                            let _ = win.close();
+                    };
+
+                    if hide_to_tray {
+                        api.prevent_close();
+                        hide_main_window_to_tray(&app_handle_for_window);
+
+                        if show_tray_hint {
+                            let _ = app_handle_for_window
+                                .notification()
+                                .builder()
+                                .title("FLOWMODE")
+                                .body("Приложение скрыто в трей. Для возврата нажмите на иконку в трее.")
+                                .show();
                         }
                     }
                 }
