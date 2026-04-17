@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Layers3, Heart, Search, Cog, SquarePlus, Trash2, X } from 'lucide-vue-next'
+import { Layers3, Heart, Search, Cog, SquarePlus, Trash2, X, Grid2x2, Bookmark } from 'lucide-vue-next'
 import { useNotesStore, useSettingsStore } from '@/stores'
 import type { Note } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
@@ -20,14 +20,13 @@ const activeView = ref<'notes' | 'vault'>('notes')
 const searchQuery = ref('')
 const isSearchModalOpen = ref(false)
 const isSettingsModalOpen = ref(false)
+const isAboutModalOpen = ref(false)
 const isLayerModalOpen = ref(false)
 const isCreateModalOpen = ref(false)
-const newNoteTitle = ref('')
 const newNoteBody = ref('')
 const selectedCreateCriticality = ref<Note['criticality'] | ''>('')
 const isEditModalOpen = ref(false)
 const editNoteId = ref<string | null>(null)
-const editNoteTitle = ref('')
 const editNoteBody = ref('')
 const editNoteCriticality = ref<Note['criticality'] | ''>('')
 const isDeleteConfirmModalOpen = ref(false)
@@ -35,17 +34,16 @@ const pendingDeleteNoteId = ref<string | null>(null)
 const pendingDeleteFromEditModal = ref(false)
 const newLayerName = ref('')
 const layerFormError = ref('')
+const githubUrl = 'https://github.com/yusheer0/flowmode'
 
 const sortedNotes = computed(() => notesStore.sortNotes(notesStore.getActiveNotesByLayer(), 'important'))
 const filteredNotes = computed(() => {
   if (!searchQuery.value) return sortedNotes.value
   const query = searchQuery.value.toLowerCase()
-  return sortedNotes.value.filter((note) => {
-    return note.content.toLowerCase().includes(query) || note.title.toLowerCase().includes(query)
-  })
+  return sortedNotes.value.filter((note) => note.content.toLowerCase().includes(query))
 })
-const isCreateEnabled = computed(() => newNoteTitle.value.length > 0 || newNoteBody.value.length > 0)
-const isEditEnabled = computed(() => editNoteTitle.value.length > 0 || editNoteBody.value.length > 0)
+const isCreateEnabled = computed(() => newNoteBody.value.length > 0)
+const isEditEnabled = computed(() => editNoteBody.value.length > 0)
 const customLayersCount = computed(() => notesStore.layers.filter(layer => !layer.isDefault).length)
 const canCreateCustomLayer = computed(() => notesStore.canCreateCustomLayer())
 const canSubmitLayer = computed(() => canCreateCustomLayer.value && newLayerName.value.length > 0)
@@ -85,7 +83,6 @@ function openCreateModal(): void {
     return
   }
   closeSecondarySheets()
-  newNoteTitle.value = ''
   newNoteBody.value = ''
   selectedCreateCriticality.value = ''
   isCreateModalOpen.value = true
@@ -99,7 +96,6 @@ function openEditModal(note: Note): void {
   closeSecondarySheets()
   isCreateModalOpen.value = false
   editNoteId.value = note.id
-  editNoteTitle.value = note.title
   editNoteBody.value = note.content
   editNoteCriticality.value = note.criticality || ''
   isEditModalOpen.value = true
@@ -133,6 +129,15 @@ function openLayerModal(): void {
   newLayerName.value = ''
   layerFormError.value = ''
   isLayerModalOpen.value = true
+}
+
+function openAboutModal(): void {
+  closeSecondarySheets()
+  isAboutModalOpen.value = true
+}
+
+function closeAboutModal(): void {
+  isAboutModalOpen.value = false
 }
 
 function closeLayerModal(): void {
@@ -193,6 +198,7 @@ function updateTheme(value: 'light' | 'dark'): void {
 function closeSecondarySheets(): void {
   isSearchModalOpen.value = false
   isSettingsModalOpen.value = false
+  isAboutModalOpen.value = false
   isLayerModalOpen.value = false
 }
 
@@ -201,7 +207,7 @@ function createNote(): void {
   const noteCriticality = selectedCreateCriticality.value || undefined
 
   notesStore.addNote({
-    title: newNoteTitle.value || t('newNoteTitle'),
+    title: t('newNoteTitle'),
     content: newNoteBody.value,
     criticality: noteCriticality,
     backgroundColor: noteCriticality ? NOTE_COLORS[noteCriticality] : NOTE_COLORS.default,
@@ -215,7 +221,6 @@ function saveEditedNote(): void {
   const noteCriticality = editNoteCriticality.value || undefined
 
   notesStore.updateNote(editNoteId.value, {
-    title: editNoteTitle.value || t('newNoteTitle'),
     content: editNoteBody.value,
     criticality: noteCriticality,
     backgroundColor: noteCriticality ? NOTE_COLORS[noteCriticality] : NOTE_COLORS.default,
@@ -291,7 +296,9 @@ onMounted(async () => {
         :style="{ backgroundColor: getNoteBackground(note) }"
         @click="openEditModal(note)"
       >
-        <h3 :class="$style.noteTitle">{{ note.title }}</h3>
+        <span v-if="note.isImportant" :class="$style.pinnedBadge" aria-hidden="true">
+          <Bookmark :size="28" fill="#ffffff" />
+        </span>
         <p :class="$style.noteContent">{{ note.content }}</p>
 
         <div :class="$style.noteActions">
@@ -334,11 +341,6 @@ onMounted(async () => {
         :close-on-overlay="false"
         @close="closeCreateModal"
       >
-        <input
-          v-model.trim="newNoteTitle"
-          :class="$style.modalInput"
-          :placeholder="t('noteTitlePlaceholder')"
-        />
         <textarea
           v-model.trim="newNoteBody"
           :class="$style.modalTextarea"
@@ -400,11 +402,6 @@ onMounted(async () => {
         :close-on-overlay="false"
         @close="closeEditModal"
       >
-        <input
-          v-model.trim="editNoteTitle"
-          :class="$style.modalInput"
-          :placeholder="t('noteTitlePlaceholder')"
-        />
         <textarea
           v-model.trim="editNoteBody"
           :class="$style.modalTextarea"
@@ -594,6 +591,33 @@ onMounted(async () => {
         </div>
       </SheetModal>
 
+      <!-- About Modal -->
+      <SheetModal
+        :is-open="isAboutModalOpen"
+        :overlay-class="$style.modalOverlay"
+        :sheet-class="[$style.modalSheet, $style.aboutSheet]"
+        :close-button-class="$style.modalClose"
+        :title-class="$style.modalTitle"
+        :title="t('aboutTitle')"
+        :close-title="t('close')"
+        @close="closeAboutModal"
+      >
+        <div :class="$style.aboutContent">
+          <p :class="$style.aboutMeta">
+            {{ t('aboutVersionLabel') }}: {{ appVersion || '—' }}
+          </p>
+          <p :class="$style.aboutDescription">{{ t('aboutDescription') }}</p>
+          <a
+            :class="$style.aboutGithubButton"
+            :href="githubUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {{ t('aboutGithubButton') }}
+          </a>
+        </div>
+      </SheetModal>
+
       <!-- Update Modal -->
       <SheetModal
         :is-open="isUpdateModalOpen"
@@ -748,6 +772,14 @@ onMounted(async () => {
         @click="openSettingsModal"
       >
         <Cog :size="20" />
+      </button>
+      <button
+        :class="[$style.dockButton, { [$style.dockButtonActive]: isAboutModalOpen }]"
+        type="button"
+        :title="t('aboutTitle')"
+        @click="openAboutModal"
+      >
+        <Grid2x2 :size="20" />
       </button>
     </nav>
 

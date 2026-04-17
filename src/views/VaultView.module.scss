@@ -1,48 +1,9 @@
 .vaultView {
   position: relative;
   height: 100%;
-  background: var(--color-bg);
+  background: #dcdcdc;
   overflow: hidden;
-}
-
-.searchInput,
-.fieldInput {
-  width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
-  padding: 10px 12px;
-  font-size: 14px;
-  color: var(--color-text);
-
-  &::placeholder {
-    color: var(--color-text-secondary);
-  }
-}
-
-.primaryButton,
-.ghostButton,
-.dangerButton {
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-.primaryButton {
-  border: none;
-  background: var(--color-primary);
-  color: var(--color-bg);
-}
-
-.ghostButton {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.dangerButton {
-  border: none;
-  background: var(--color-danger);
-  color: var(--color-bg);
+  padding: 0;
 }
 
 .errorBanner {
@@ -53,24 +14,24 @@
   z-index: 12;
   width: min(640px, calc(100% - 32px));
   border-radius: 8px;
-  background: var(--color-priority-high);
-  color: var(--color-danger);
-  border: 1px solid var(--color-priority-high-border);
+  background: #ffebe9;
+  color: #cf222e;
+  border: 1px solid #f3b7bd;
   padding: 8px 12px;
 }
 
 .canvas {
   width: 100%;
   height: 100%;
-  padding: 12px 12px 76px;
+  padding: 12px 12px 72px;
   overflow: auto;
-  background-color: var(--color-surface);
+  background-color: #ffffff;
   border-radius: 16px;
 }
 
 .listPane {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
   min-height: 100%;
@@ -78,66 +39,49 @@
 
 .card {
   position: relative;
-  border: 1px solid var(--color-border);
+  width: 100%;
+  min-width: 0;
+  min-height: 180px;
   border-radius: 16px;
-  background: var(--color-bg);
-  padding: 14px;
+  padding: 32px 24px;
   padding-bottom: 44px;
-  min-height: 210px;
+  background: rgba(120, 120, 125, 0.55);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   display: grid;
   gap: 8px;
-  box-shadow: var(--shadow-sm);
+  align-content: start;
+  overflow: hidden;
+
+  &:hover {
+    cursor: pointer;
+  }
 }
 
 .cardTitle {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1.2;
+  font-weight: 600;
   word-break: break-word;
 }
 
 .cardText {
   margin: 0;
-  color: var(--color-text);
-  font-size: 13px;
-}
-
-.cardInfoRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.cardInfoValue {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.inlineAction {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  display: grid;
-  place-items: center;
-  color: var(--color-text);
-  background: var(--color-bg);
-  transition: background-color 0.18s ease;
-
-  &:hover {
-    background: var(--color-surface);
-  }
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .actions {
   position: absolute;
-  right: 12px;
-  bottom: 10px;
+  right: 8px;
+  bottom: 8px;
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 4px;
   opacity: 0;
   transform: translateY(14px);
   pointer-events: none;
@@ -151,17 +95,16 @@
 }
 
 .cardAction {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--color-border);
   border-radius: 50%;
-  background: var(--color-bg);
   display: grid;
   place-items: center;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  color: #000000;
+  background: #c1c1c1;
+  transition: background-color 0.4s ease, color 0.4s ease;
 
   svg {
     width: 14px;
@@ -169,103 +112,168 @@
   }
 
   &:hover {
-    background: rgba(127, 127, 127, 0.16);
+    background: #000000;
+    color: #ffffff;
   }
 }
 
-.cardActionDanger {
-  color: var(--color-danger);
-}
-
 .emptyState {
+  grid-column: 1 / -1;
   margin: 0;
-  color: var(--color-text-secondary);
+  color: #8e8e96;
   text-align: center;
   padding: 24px;
 }
 
-.historyHint {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
-.unlockError {
-  margin: 0;
-  color: var(--color-danger);
-  font-size: 13px;
-}
-
-.resetButton {
-  justify-self: start;
-  border: none;
-  background: transparent;
-  color: var(--color-danger);
-  font-size: 13px;
-  padding: 0;
-}
-
 .modalOverlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
+  background: rgba(24, 24, 28, 0.24);
+  z-index: 8;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(24, 24, 28, 0.24);
-  z-index: 20;
-  padding: 0;
+}
+
+.deleteConfirmOverlay {
+  z-index: 10;
 }
 
 .topModalOverlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(24, 24, 28, 0.24);
-  z-index: 20;
+  z-index: 9;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: 20px;
 }
 
-.modalCard {
-  width: min(720px, 100%);
-  min-height: 220px;
+.modalSheet {
+  position: relative;
+  width: min(680px, 100%);
+  min-height: 162px;
   max-height: 80vh;
-  overflow: auto;
-  display: grid;
-  gap: 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 18px 18px 0 0;
   padding: 18px;
+  border-radius: 18px 18px 0 0;
+  background: #ffffff;
+  box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.topModalCard {
-  width: min(720px, 100%);
+.topModalSheet {
+  width: min(680px, 100%);
   border-radius: 18px;
   max-height: calc(100vh - 72px);
 }
 
-.searchModalCard {
-  width: min(680px, 100%);
-  min-height: 200px;
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: #2c2d30;
+  display: grid;
+  place-items: center;
+
+  &:hover {
+    background: #f0f0f3;
+  }
+}
+
+.modalTitle {
+  margin: 0;
+  color: #1e1f24;
+  font-size: 20px;
+}
+
+.modalInput {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #d7d7dc;
+  border-radius: 12px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #1e1f24;
+  outline: none;
+
+  &:focus {
+    border-color: #8f8f98;
+  }
 }
 
 .modalActions {
+  align-self: flex-end;
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
 }
 
-.revealPassword {
+.modalSaveButton,
+.modalDeleteButton,
+.modalCancelButton {
+  height: 40px;
+  border-radius: 10px;
+  padding: 0 18px;
+}
+
+.modalSaveButton {
+  color: #ffffff;
+  background: #1a7f37;
+}
+
+.modalDeleteButton {
+  color: #ffffff;
+  background: #cf222e;
+}
+
+.modalCancelButton {
+  border: 1px solid #d7d7dc;
+  background: #ffffff;
+  color: #1e1f24;
+}
+
+.confirmMessage {
   margin: 0;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  padding: 10px;
-  font-family: monospace;
-  font-size: 16px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  color: #575860;
+  font-size: 14px;
+}
+
+.confirmActions {
+  align-self: flex-end;
+  display: flex;
+  gap: 8px;
+}
+
+.searchSheet {
+  min-height: 150px;
+}
+
+.searchField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d7d7dc;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #65656f;
+}
+
+.searchInput {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #1e1f24;
+  font-size: 14px;
+  outline: none;
+
+  &::placeholder {
+    color: #8a8a95;
+  }
 }
 
 .bottomDock {
@@ -275,44 +283,42 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   padding: 8px;
   padding-bottom: 0;
   border-radius: 14px;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-bottom: none;
+  background: #dcdcdc;
 }
 
 .dockButton {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  color: var(--color-text);
+  color: #1e1e1f;
   display: grid;
   place-items: center;
   transition: background-color 0.18s ease;
 
   &:hover {
-    background: rgba(127, 127, 127, 0.16);
+    background: rgba(255, 255, 255, 0.45);
   }
 }
 
 .dockButtonActive {
-  background: var(--color-text);
-  color: var(--color-bg);
+  background: #0f1115;
+  color: #ffffff;
 }
 
 :global(.sheet-enter-active),
 :global(.sheet-leave-active) {
-  transition: background-color 0.13s ease;
+  transition: background-color 0.5s ease;
 }
 
-:global(.sheet-enter-active) .modalCard,
-:global(.sheet-leave-active) .modalCard {
-  transition: transform 0.13s ease;
+:global(.sheet-enter-active) .modalSheet,
+:global(.sheet-leave-active) .modalSheet {
+  transition: transform 0.5s ease;
 }
 
 :global(.sheet-enter-from),
@@ -320,8 +326,8 @@
   background-color: rgba(24, 24, 28, 0);
 }
 
-:global(.sheet-enter-from) .modalCard,
-:global(.sheet-leave-to) .modalCard {
+:global(.sheet-enter-from) .modalSheet,
+:global(.sheet-leave-to) .modalSheet {
   transform: translateY(100%);
 }
 
@@ -332,12 +338,12 @@
 
 :global(.top-sheet-enter-active),
 :global(.top-sheet-leave-active) {
-  transition: background-color 0.12s ease;
+  transition: background-color 0.5s ease;
 }
 
-:global(.top-sheet-enter-active) .topModalCard,
-:global(.top-sheet-leave-active) .topModalCard {
-  transition: transform 0.12s ease, opacity 0.12s ease;
+:global(.top-sheet-enter-active) .topModalSheet,
+:global(.top-sheet-leave-active) .topModalSheet {
+  transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
 :global(.top-sheet-enter-from),
@@ -345,8 +351,8 @@
   background-color: rgba(24, 24, 28, 0);
 }
 
-:global(.top-sheet-enter-from) .topModalCard,
-:global(.top-sheet-leave-to) .topModalCard {
+:global(.top-sheet-enter-from) .topModalSheet,
+:global(.top-sheet-leave-to) .topModalSheet {
   transform: translateY(-28px);
   opacity: 0;
 }
@@ -356,26 +362,61 @@
   background-color: rgba(24, 24, 28, 0.24);
 }
 
-:global([data-theme='dark']) .cardAction {
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
+:global([data-theme='dark']) .vaultView {
+  background: #000000;
+}
+
+:global([data-theme='dark']) .canvas {
+  background: #212121;
+}
+
+:global([data-theme='dark']) .modalSheet {
+  background: #000000;
+  box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.45);
+}
+
+:global([data-theme='dark']) .modalTitle,
+:global([data-theme='dark']) .modalClose {
+  color: #e6edf3;
+}
+
+:global([data-theme='dark']) .modalClose:hover {
+  background: #21262d;
+}
+
+:global([data-theme='dark']) .modalInput,
+:global([data-theme='dark']) .modalCancelButton,
+:global([data-theme='dark']) .searchField {
+  border-color: #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+:global([data-theme='dark']) .searchInput {
+  color: #e6edf3;
+
+  &::placeholder {
+    color: #8b949e;
   }
 }
 
-:global([data-theme='dark']) .inlineAction {
-  &:hover {
-    background: rgba(255, 255, 255, 0.12);
-  }
+:global([data-theme='dark']) .confirmMessage {
+  color: #8b949e;
 }
 
-@media (max-width: 960px) {
-  .listPane {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+:global([data-theme='dark']) .bottomDock {
+  background: #000000;
 }
 
-@media (max-width: 640px) {
-  .listPane {
-    grid-template-columns: minmax(0, 1fr);
-  }
+:global([data-theme='dark']) .dockButton {
+  color: #e6edf3;
+}
+
+:global([data-theme='dark']) .dockButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme='dark']) .cardAction:hover {
+  background: #ffffff;
+  color: #000000;
 }

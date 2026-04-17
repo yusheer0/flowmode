@@ -10,46 +10,21 @@
           v-for="item in filteredItems"
           :key="item.id"
           :class="$style.card"
+          @click="openEditModal(item)"
         >
           <h3 :class="$style.cardTitle">{{ item.title }}</h3>
-          <p :class="[$style.cardText, $style.cardInfoRow]">
-            <span :class="$style.cardInfoValue">
-              <strong>{{ t('loginLabel') }}:</strong> {{ item.username }}
-            </span>
-            <button
-              :class="$style.inlineAction"
-              type="button"
-              :title="t('copyLogin')"
-              @click.stop="copyUsername(item.id)"
-            >
-              <Copy :size="14" />
-            </button>
+          <p :class="$style.cardText">
+            <strong>{{ t('loginLabel') }}:</strong> {{ item.username }}
           </p>
-          <p :class="[$style.cardText, $style.cardInfoRow]">
-            <span :class="$style.cardInfoValue">
-              <strong>{{ t('passwordLabel') }}:</strong> {{ getMaskedPassword(item.id, item.passwordMasked) }}
-            </span>
-            <button
-              :class="$style.inlineAction"
-              type="button"
-              :title="t('copyPassword')"
-              @click.stop="copyPassword(item.id)"
-            >
-              <Copy :size="14" />
-            </button>
+          <p :class="$style.cardText">
+            <strong>{{ t('passwordLabel') }}:</strong> {{ item.passwordMasked }}
           </p>
           <p v-if="item.url" :class="$style.cardText">
             <strong>URL:</strong> {{ item.url }}
           </p>
           <div :class="$style.actions">
-            <button :class="$style.cardAction" type="button" :title="t('reveal')" @click.stop="openRevealModal(item)">
-              <Eye :size="14" />
-            </button>
-            <button :class="$style.cardAction" type="button" :title="t('edit')" @click.stop="openEditModal(item)">
-              <Pencil :size="14" />
-            </button>
             <button
-              :class="[$style.cardAction, $style.cardActionDanger]"
+              :class="$style.cardAction"
               type="button"
               :title="t('delete')"
               @click.stop="requestDelete(item.id)"
@@ -58,77 +33,75 @@
             </button>
           </div>
         </article>
+        <p v-if="!filteredItems.length" :class="$style.emptyState">
+          {{ t('emptyState') }}
+        </p>
       </div>
     </div>
 
-    <transition :name="isEditing ? 'top-sheet' : 'sheet'">
-      <div
-        v-if="isFormModalOpen"
-        :class="[isEditing ? $style.topModalOverlay : $style.modalOverlay]"
-        @click.self="closeFormModal"
-      >
-        <div :class="[$style.modalCard, { [$style.topModalCard]: isEditing }]">
-          <h2>{{ isEditing ? t('editTitle') : t('createTitle') }}</h2>
-          <input v-model.trim="form.title" :class="$style.fieldInput" :placeholder="t('titlePlaceholder')" />
-          <input v-model.trim="form.username" :class="$style.fieldInput" :placeholder="t('usernamePlaceholder')" />
-          <input v-model="form.password" :class="$style.fieldInput" :placeholder="t('passwordPlaceholder')" />
-          <input v-model.trim="form.url" :class="$style.fieldInput" :placeholder="t('urlPlaceholder')" />
+    <SheetModal
+      :is-open="isFormModalOpen"
+      :transition-name="isEditing ? 'top-sheet' : 'sheet'"
+      :overlay-class="isEditing ? $style.topModalOverlay : $style.modalOverlay"
+      :sheet-class="isEditing ? [$style.modalSheet, $style.topModalSheet] : $style.modalSheet"
+      :close-button-class="$style.modalClose"
+      :title-class="$style.modalTitle"
+      :title="isEditing ? t('editTitle') : t('createTitle')"
+      :close-title="t('close')"
+      :close-on-overlay="false"
+      @close="closeFormModal"
+    >
+      <input v-model.trim="form.title" :class="$style.modalInput" :placeholder="t('titlePlaceholder')" />
+      <input v-model.trim="form.username" :class="$style.modalInput" :placeholder="t('usernamePlaceholder')" />
+      <input v-model="form.password" :class="$style.modalInput" :placeholder="t('passwordPlaceholder')" />
+      <input v-model.trim="form.url" :class="$style.modalInput" :placeholder="t('urlPlaceholder')" />
 
-          <div :class="$style.modalActions">
-            <button :class="$style.ghostButton" type="button" @click="closeFormModal">{{ t('cancel') }}</button>
-            <button :class="$style.primaryButton" type="button" @click="saveForm">{{ t('save') }}</button>
-          </div>
-        </div>
+      <div :class="$style.modalActions">
+        <button :class="$style.modalCancelButton" type="button" @click="closeFormModal">{{ t('cancel') }}</button>
+        <button :class="$style.modalSaveButton" type="button" @click="saveForm">{{ t('save') }}</button>
       </div>
-    </transition>
+    </SheetModal>
 
-    <transition name="sheet">
-      <div v-if="isDeleteConfirmModalOpen" :class="$style.modalOverlay" @click.self="closeDeleteConfirmModal">
-        <div :class="$style.modalCard">
-          <h2>{{ t('deleteConfirmTitle') }}</h2>
-          <p :class="$style.historyHint">{{ t('deleteConfirmDescription') }}</p>
-          <div :class="$style.modalActions">
-            <button :class="$style.ghostButton" type="button" @click="closeDeleteConfirmModal">
-              {{ t('cancel') }}
-            </button>
-            <button :class="$style.dangerButton" type="button" @click="confirmDelete">
-              {{ t('delete') }}
-            </button>
-          </div>
-        </div>
+    <SheetModal
+      :is-open="isDeleteConfirmModalOpen"
+      :overlay-class="[$style.modalOverlay, $style.deleteConfirmOverlay]"
+      :sheet-class="$style.modalSheet"
+      :title-class="$style.modalTitle"
+      :title="t('deleteConfirmTitle')"
+      :show-close="false"
+      @close="closeDeleteConfirmModal"
+    >
+      <p :class="$style.confirmMessage">{{ t('deleteConfirmDescription') }}</p>
+      <div :class="$style.confirmActions">
+        <button :class="$style.modalCancelButton" type="button" @click="closeDeleteConfirmModal">
+          {{ t('cancel') }}
+        </button>
+        <button :class="$style.modalDeleteButton" type="button" @click="confirmDelete">
+          {{ t('delete') }}
+        </button>
       </div>
-    </transition>
+    </SheetModal>
 
-    <transition name="sheet">
-      <div v-if="isRevealModalOpen" :class="$style.modalOverlay" @click.self="closeRevealModal">
-        <div :class="$style.modalCard">
-          <h2>{{ t('revealTitle') }}</h2>
-          <p>{{ revealItemTitle }}</p>
-          <p :class="$style.revealPassword">{{ revealedPassword || '••••••••' }}</p>
-          <p :class="$style.historyHint">{{ t('revealHint') }}</p>
-          <div :class="$style.modalActions">
-            <button :class="$style.ghostButton" type="button" @click="closeRevealModal">{{ t('close') }}</button>
-          </div>
-        </div>
+    <SheetModal
+      :is-open="isSearchModalOpen"
+      :overlay-class="$style.modalOverlay"
+      :sheet-class="[$style.modalSheet, $style.searchSheet]"
+      :close-button-class="$style.modalClose"
+      :title-class="$style.modalTitle"
+      :title="t('searchTitle')"
+      :close-title="t('close')"
+      @close="closeSearchModal"
+    >
+      <div :class="$style.searchField">
+        <Search :size="16" />
+        <input
+          v-model.trim="searchQuery"
+          :class="$style.searchInput"
+          :placeholder="t('searchPlaceholder')"
+          autofocus
+        />
       </div>
-    </transition>
-
-    <transition name="sheet">
-      <div v-if="isSearchModalOpen" :class="$style.modalOverlay" @click.self="closeSearchModal">
-        <div :class="[$style.modalCard, $style.searchModalCard]">
-          <h2>{{ t('searchTitle') }}</h2>
-          <input
-            v-model.trim="searchQuery"
-            :class="$style.searchInput"
-            :placeholder="t('searchPlaceholder')"
-            autofocus
-          />
-          <div :class="$style.modalActions">
-            <button :class="$style.ghostButton" type="button" @click="closeSearchModal">{{ t('close') }}</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    </SheetModal>
 
     <nav :class="$style.bottomDock">
       <button :class="$style.dockButton" type="button" :title="t('createEntry')" @click="openCreateModal">
@@ -148,7 +121,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Copy, Eye, Pencil, Search, SquarePlus, Trash2 } from 'lucide-vue-next'
+import { Search, SquarePlus, Trash2 } from 'lucide-vue-next'
+import SheetModal from '@/components/SheetModal.vue'
 import { useSettingsStore, useVaultStore } from '@/stores'
 import type { VaultItem, VaultItemInput } from '@/types'
 
@@ -157,15 +131,11 @@ const settingsStore = useSettingsStore()
 
 const searchQuery = ref('')
 const isFormModalOpen = ref(false)
-const isRevealModalOpen = ref(false)
 const isSearchModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
 const isEditing = ref(false)
 const editingId = ref<string | null>(null)
 const pendingDeleteItemId = ref<string | null>(null)
-const revealItemId = ref<string | null>(null)
-const revealItemTitle = ref('')
-const revealedPassword = ref<string | null>(null)
 const form = ref({
   title: '',
   username: '',
@@ -330,23 +300,6 @@ async function saveForm(): Promise<void> {
   }
 }
 
-async function openRevealModal(item: VaultItem): Promise<void> {
-  revealItemId.value = item.id
-  revealItemTitle.value = item.title
-  revealedPassword.value = await vaultStore.revealPassword(item.id)
-  isRevealModalOpen.value = true
-}
-
-function closeRevealModal(): void {
-  if (revealItemId.value) {
-    vaultStore.hidePassword(revealItemId.value)
-  }
-  revealItemId.value = null
-  revealItemTitle.value = ''
-  revealedPassword.value = null
-  isRevealModalOpen.value = false
-}
-
 function openSearchModal(): void {
   isSearchModalOpen.value = true
 }
@@ -363,18 +316,6 @@ function toggleSearchModal(): void {
   openSearchModal()
 }
 
-async function copyUsername(itemId: string): Promise<void> {
-  const success = await vaultStore.copyUsername(itemId)
-  if (!success) return
-  alert('Логин скопирован')
-}
-
-async function copyPassword(itemId: string): Promise<void> {
-  const success = await vaultStore.copyPassword(itemId)
-  if (!success) return
-  alert('Пароль скопирован')
-}
-
 async function requestDelete(itemId: string): Promise<void> {
   pendingDeleteItemId.value = itemId
   isDeleteConfirmModalOpen.value = true
@@ -389,10 +330,6 @@ async function confirmDelete(): Promise<void> {
   if (!pendingDeleteItemId.value) return
   await vaultStore.deleteItem(pendingDeleteItemId.value)
   closeDeleteConfirmModal()
-}
-
-function getMaskedPassword(itemId: string, fallback: string): string {
-  return vaultStore.getVisiblePassword(itemId) || fallback
 }
 
 onMounted(async () => {

@@ -977,19 +977,28 @@ async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String
                     let target_version = update.version.to_string();
                     let app_handle = app.clone();
                     let emit_version = target_version.clone();
+                    let mut total_downloaded: u64 = 0;
                     update
                         .download_and_install(
                             move |downloaded, content_length| {
+                                let downloaded_chunk = downloaded as u64;
+                                // Some updater backends report chunk size instead of cumulative bytes.
+                                // Normalize it to cumulative progress to keep the UI progress bar moving.
+                                if downloaded_chunk >= total_downloaded {
+                                    total_downloaded = downloaded_chunk;
+                                } else {
+                                    total_downloaded = total_downloaded.saturating_add(downloaded_chunk);
+                                }
                                 let progress = content_length
                                     .and_then(|total| {
                                         if total > 0 {
-                                            Some((downloaded as f64 / total as f64) * 100.0)
+                                            Some((total_downloaded as f64 / total as f64) * 100.0)
                                         } else {
                                             None
                                         }
                                     });
                                 let payload = UpdateDownloadProgress {
-                                    downloaded: downloaded as u64,
+                                    downloaded: total_downloaded,
                                     content_length,
                                     progress,
                                     version: emit_version.clone(),

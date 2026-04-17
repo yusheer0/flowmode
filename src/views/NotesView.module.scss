@@ -21,7 +21,7 @@
 
 .canvas {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3 , minmax(0, 1fr));
   align-content: start;
   gap: 12px;
   width: 100%;
@@ -43,9 +43,9 @@
   position: relative;
   width: 100%;
   min-width: 0;
-  min-height: 240px;
+  min-height: 220px;
   border-radius: 16px;
-  padding: 20px;
+  padding: 32px 24px;
   padding-bottom: 44px;
   background: rgba(120, 120, 125, 0.55);
   color: #ffffff;
@@ -59,7 +59,21 @@
 }
 
 .noteCardPinned {
-  border: 2px solid #000000;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.26), 0 10px 26px rgba(0, 0, 0, 0.14);
+}
+
+.pinnedBadge {
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .noteTitle {
@@ -77,7 +91,7 @@
   min-height: 110px;
   margin: 0;
   color: inherit;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.25;
   white-space: pre-wrap;
   word-break: break-word;
@@ -167,7 +181,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: 20px;
 }
 
 .modalSheet {
@@ -229,7 +243,7 @@
 
 .modalTextarea {
   width: 100%;
-  min-height: 170px;
+  min-height: 300px;
   border: 1px solid #d7d7dc;
   border-radius: 12px;
   padding: 12px;
@@ -327,40 +341,37 @@
   align-items: center;
   justify-content: center;
   min-height: 40px;
-  border: 1px solid #d7d7dc;
+  border: 1px solid #626262;
   border-radius: 12px;
   padding: 0 10px;
   font-size: 14px;
-  color: #1e1f24;
-  background: #f5f5f8;
+  color: #626262;
+  background: transparent;
   outline: none;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: border-color 0.18s ease, color 0.18s ease;
 
   &:focus {
-    border-color: #000000;
+    border-color: #8c8c94;
   }
 }
 
-.criticalityOptionLow {
-  border-color: #abb4da;
-  background: #e7e7f6;
-  color: #272568;
-}
-
-.criticalityOptionMedium {
-  border-color: #efd6a5;
-  background: #fff3db;
-  color: #85632a;
-}
-
-.criticalityOptionHigh {
-  border-color: #efb1b1;
-  background: #fdeaea;
-  color: #8f3434;
-}
-
 .criticalityOptionActive {
-  border-color: #0f1115;
+  background: transparent;
+}
+
+.criticalityOptionActive.criticalityOptionLow {
+  border-color: #5b89e7;
+  color: #7b8fb8;
+}
+
+.criticalityOptionActive.criticalityOptionMedium {
+  border-color: #db9f4a;
+  color: #b89565;
+}
+
+.criticalityOptionActive.criticalityOptionHigh {
+  border-color: #cc3030;
+  color: #b96464;
 }
 
 .searchSheet {
@@ -369,6 +380,10 @@
 
 .settingsSheet {
   min-height: 240px;
+}
+
+.aboutSheet {
+  min-height: 180px;
 }
 
 .layerSheet {
@@ -595,6 +610,52 @@
   font-size: 13px;
 }
 
+.aboutContent {
+  display: grid;
+  gap: 8px;
+}
+
+.aboutAppName {
+  margin: 0;
+  color: #1e1f24;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.aboutMeta {
+  margin: 0;
+  color: #575860;
+  font-size: 13px;
+}
+
+.aboutDescription {
+  margin: 0;
+  color: #575860;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.aboutGithubButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  width: fit-content;
+  border: 1px solid #d4d5db;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: #f2f2f6;
+  color: #1e1f24;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.aboutGithubButton:hover {
+  background: #e6e7ec;
+}
+
 .updateProgressWrap {
   display: grid;
   gap: 8px;
@@ -704,19 +765,13 @@
 }
 
 :global([data-theme='dark']) .criticalityOption {
-  border-color: #30363d;
-  background: #0d1117;
-  color: #e6edf3;
-}
-
-:global([data-theme='dark']) .criticalityOption:hover {
-  background: #21262d;
+  border-color: #ffffff;
+  background: transparent;
+  color: #ffffff;
 }
 
 :global([data-theme='dark']) .criticalityOptionActive {
-  border-color: #e6edf3;
-  background: #e6edf3;
-  color: #0d1117;
+  background: transparent;
 }
 
 :global([data-theme='dark']) .settingsOption {
@@ -757,6 +812,28 @@
   color: #8b949e;
 }
 
+:global([data-theme='dark']) .aboutAppName {
+  color: #e6edf3;
+}
+
+:global([data-theme='dark']) .aboutMeta {
+  color: #8b949e;
+}
+
+:global([data-theme='dark']) .aboutDescription {
+  color: #8b949e;
+}
+
+:global([data-theme='dark']) .aboutGithubButton {
+  border-color: #30363d;
+  background: #161b22;
+  color: #e6edf3;
+}
+
+:global([data-theme='dark']) .aboutGithubButton:hover {
+  background: #1f2630;
+}
+
 :global([data-theme='dark']) .updateProgressTrack {
   background: #30363d;
 }
@@ -765,22 +842,19 @@
   background: #e6edf3;
 }
 
-:global([data-theme='dark']) .criticalityOptionLow {
-  border-color: #abb4da;
-  background: #e7e7f6;
-  color: #272568;
+:global([data-theme='dark']) .criticalityOptionActive.criticalityOptionLow {
+  border-color: #7b8fb8;
+  color: #7b8fb8;
 }
 
-:global([data-theme='dark']) .criticalityOptionMedium {
-  border-color: #efd6a5;
-  background: #fff3db;
-  color: #85632a;
+:global([data-theme='dark']) .criticalityOptionActive.criticalityOptionMedium {
+  border-color: #b89565;
+  color: #b89565;
 }
 
-:global([data-theme='dark']) .criticalityOptionHigh {
-  border-color: #efb1b1;
-  background: #fdeaea;
-  color: #8f3434;
+:global([data-theme='dark']) .criticalityOptionActive.criticalityOptionHigh {
+  border-color: #b96464;
+  color: #b96464;
 }
 
 :global([data-theme='dark']) .bottomDock {
@@ -817,6 +891,10 @@
 
 :global([data-theme='dark']) .viewButton:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+:global([data-theme='dark']) .layerStatusWrapper {
+  background: #212121;
 }
 
 .bottomDock {
@@ -869,7 +947,7 @@
 
 .layerStatusValue {
   line-height: 1.2;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: #ffffff;
   max-width: 180px;
@@ -884,7 +962,6 @@
   bottom: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
   padding: 8px;
   padding-bottom: 0;
   border-radius: 14px;
@@ -904,7 +981,7 @@
   transition: background-color 0.18s ease, color 0.18s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
   }
 }
 

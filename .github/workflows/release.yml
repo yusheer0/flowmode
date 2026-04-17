@@ -38,10 +38,10 @@ jobs:
           changelog_path = pathlib.Path("CHANGELOG.md")
           tag_name = os.environ.get("GITHUB_REF_NAME", "").strip()
           version = tag_name[1:] if tag_name.startswith("v") else tag_name
-          release_name = f"FLOWMODE {tag_name}"
+          release_name = f"Flowmode {tag_name}"
           fallback_body = (
-              "Описание релиза не найдено в CHANGELOG.md.\n\n"
-              f"Добавьте секцию `## [{version}]` и повторите выпуск."
+              "Release description not found in CHANGELOG.md.\n\n"
+              f"Add a section `## [{version}]` and repeat the release."
           )
 
           body = fallback_body

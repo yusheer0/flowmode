@@ -23,6 +23,112 @@ const STORAGE_KEYS = {
 const USER_DATA_OWNERSHIP_KEY = 'flowmodeUserDataOwned'
 
 type StorageMap = Record<string, string>
+type VaultDevItem = VaultItem & { password: string }
+
+const DEV_VAULT_ITEMS_KEY = 'vaultItemsDev'
+const DEV_VAULT_EVENTS_KEY = 'vaultEventsDev'
+
+function isClientSide(): boolean {
+  return typeof window !== 'undefined'
+}
+
+function hasTauriInvokeRuntime(): boolean {
+  if (!isClientSide()) return false
+  const tauriInternals = (window as Window & {
+    __TAURI_INTERNALS__?: { invoke?: unknown }
+  }).__TAURI_INTERNALS__
+  return typeof tauriInternals?.invoke === 'function'
+}
+
+function shouldUseVaultFallback(): boolean {
+  return !hasTauriInvokeRuntime() && import.meta.env.MODE !== 'test'
+}
+
+function readDevVaultItems(): VaultDevItem[] {
+  if (!isClientSide()) return []
+  const raw = localStorage.getItem(DEV_VAULT_ITEMS_KEY)
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw) as VaultDevItem[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeDevVaultItems(items: VaultDevItem[]): void {
+  if (!isClientSide()) return
+  localStorage.setItem(DEV_VAULT_ITEMS_KEY, JSON.stringify(items))
+}
+
+function readDevVaultEvents(): VaultEvent[] {
+  if (!isClientSide()) return []
+  const raw = localStorage.getItem(DEV_VAULT_EVENTS_KEY)
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw) as VaultEvent[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeDevVaultEvents(events: VaultEvent[]): void {
+  if (!isClientSide()) return
+  localStorage.setItem(DEV_VAULT_EVENTS_KEY, JSON.stringify(events))
+}
+
+function maskPassword(password: string): string {
+  const length = Math.max(8, Math.min(password.length, 16))
+  return '*'.repeat(length)
+}
+
+function toVaultItem(devItem: VaultDevItem): VaultItem {
+  const { password: _password, ...item } = devItem
+  return item
+}
+
+function createVaultEvent(itemId: string, type: VaultEvent['type']): VaultEvent {
+  return {
+    id: crypto.randomUUID(),
+    itemId,
+    type,
+    createdAt: new Date().toISOString(),
+  }
+}
+
+function addDevVaultEvent(itemId: string, type: VaultEvent['type']): VaultEvent[] {
+  const nextEvent = createVaultEvent(itemId, type)
+  const nextEvents = [nextEvent, ...readDevVaultEvents()]
+  writeDevVaultEvents(nextEvents)
+  return nextEvents
+}
+
+function buildPasswordAlphabet(includeSymbols: boolean, includeDigits: boolean, avoidAmbiguous: boolean): string {
+  let alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  if (includeDigits) alphabet += '0123456789'
+  if (includeSymbols) alphabet += '!@#$%^&*()_+-=[]{}:;,.?/'
+
+  if (!avoidAmbiguous) return alphabet
+
+  const ambiguousChars = new Set(['0', 'O', 'o', '1', 'l', 'I', '|'])
+  return [...alphabet].filter(char => !ambiguousChars.has(char)).join('')
+}
+
+function generateFallbackPassword(
+  length: number,
+  includeSymbols: boolean,
+  includeDigits: boolean,
+  avoidAmbiguous: boolean
+): string {
+  const targetLength = Math.max(4, Math.min(length, 128))
+  const alphabet = buildPasswordAlphabet(includeSymbols, includeDigits, avoidAmbiguous)
+  const safeAlphabet = alphabet.length > 0 ? alphabet : 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const values = crypto.getRandomValues(new Uint32Array(targetLength))
+  return Array.from(values, value => safeAlphabet[value % safeAlphabet.length]).join('')
+}
 
 async function dbGetMany(keys: string[]): Promise<StorageMap> {
   try {
@@ -58,7 +164,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const SETTINGS_STORAGE_KEY = 'appSettings'
   const defaultSettings: AppSettings = {
     theme: 'light',
-    language: 'ru',
+    language: 'en',
     notificationsEnabled: false,
     backupEnabled: false,
     minimizeOnClose: false,
@@ -92,7 +198,7 @@ export const useSettingsStore = defineStore('settings', () => {
         ...defaultSettings,
         ...parsed,
         language: parsedLanguage === 'ko'
-          ? 'ru'
+          ? 'en'
           : (parsed.language || defaultSettings.language),
         telegram: {
           ...defaultSettings.telegram,
@@ -579,6 +685,10 @@ export const useVaultStore = defineStore('vault', () => {
     isLoading.value = true
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        items.value = readDevVaultItems().map(toVaultItem)
+        return
+      }
       items.value = await invoke<VaultItem[]>('vault_list')
     } catch (e) {
       error.value = `Ошибка загрузки vault: ${e}`
@@ -591,6 +701,13 @@ export const useVaultStore = defineStore('vault', () => {
   async function refreshEvents(itemId?: string): Promise<void> {
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        const source = readDevVaultEvents()
+        events.value = itemId
+          ? source.filter(entry => entry.itemId === itemId)
+          : source
+        return
+      }
       events.value = await invoke<VaultEvent[]>('vault_list_events', { itemId })
     } catch (e) {
       error.value = `Ошибка загрузки истории vault: ${e}`
@@ -606,6 +723,27 @@ export const useVaultStore = defineStore('vault', () => {
 
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        const now = new Date().toISOString()
+        const createdDevItem: VaultDevItem = {
+          id: crypto.randomUUID(),
+          title: normalized.title,
+          service: normalized.service,
+          username: normalized.username,
+          password: normalized.password,
+          passwordMasked: maskPassword(normalized.password),
+          url: normalized.url,
+          notes: normalized.notes,
+          tags: normalized.tags,
+          createdAt: now,
+          updatedAt: now,
+        }
+        const nextItems = [createdDevItem, ...readDevVaultItems()]
+        writeDevVaultItems(nextItems)
+        items.value = nextItems.map(toVaultItem)
+        events.value = addDevVaultEvent(createdDevItem.id, 'created')
+        return true
+      }
       const created = await invoke<VaultItem>('vault_create', { input: normalized })
       items.value = [created, ...items.value.filter(item => item.id !== created.id)]
       await refreshEvents()
@@ -625,6 +763,33 @@ export const useVaultStore = defineStore('vault', () => {
 
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        const source = readDevVaultItems()
+        const existing = source.find(item => item.id === id)
+        if (!existing) return false
+
+        const nextItems = source.map((item) => {
+          if (item.id !== id) return item
+          return {
+            ...item,
+            title: normalized.title,
+            service: normalized.service,
+            username: normalized.username,
+            password: normalized.password,
+            passwordMasked: maskPassword(normalized.password),
+            url: normalized.url,
+            notes: normalized.notes,
+            tags: normalized.tags,
+            updatedAt: new Date().toISOString(),
+          }
+        })
+
+        writeDevVaultItems(nextItems)
+        items.value = nextItems.map(toVaultItem)
+        delete revealCache.value[id]
+        events.value = addDevVaultEvent(id, 'updated')
+        return true
+      }
       const updated = await invoke<VaultItem>('vault_update', { id, input: normalized })
       items.value = items.value.map(item => (item.id === id ? updated : item))
       delete revealCache.value[id]
@@ -639,6 +804,18 @@ export const useVaultStore = defineStore('vault', () => {
   async function deleteItem(id: string): Promise<boolean> {
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        const source = readDevVaultItems()
+        const exists = source.some(item => item.id === id)
+        if (!exists) return false
+
+        const nextItems = source.filter(item => item.id !== id)
+        writeDevVaultItems(nextItems)
+        items.value = nextItems.map(toVaultItem)
+        delete revealCache.value[id]
+        events.value = addDevVaultEvent(id, 'deleted')
+        return true
+      }
       const deleted = await invoke<boolean>('vault_delete', { id })
       if (!deleted) return false
       items.value = items.value.filter(item => item.id !== id)
@@ -654,6 +831,16 @@ export const useVaultStore = defineStore('vault', () => {
   async function revealPassword(itemId: string): Promise<string | null> {
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        const item = readDevVaultItems().find(entry => entry.id === itemId)
+        if (!item) return null
+        revealCache.value[itemId] = {
+          value: item.password,
+          expiresAt: Date.now() + REVEAL_TTL_MS,
+        }
+        events.value = addDevVaultEvent(itemId, 'revealed')
+        return item.password
+      }
       const password = await invoke<string>('vault_reveal', { id: itemId })
       if (!password) return null
       revealCache.value[itemId] = {
@@ -686,6 +873,10 @@ export const useVaultStore = defineStore('vault', () => {
     if (!item) return false
     try {
       await navigator.clipboard.writeText(item.username)
+      if (shouldUseVaultFallback()) {
+        events.value = addDevVaultEvent(itemId, 'copied_login')
+        return true
+      }
       await invoke<boolean>('vault_log_copy', { itemId, field: 'username' })
       await refreshEvents()
       return true
@@ -700,6 +891,10 @@ export const useVaultStore = defineStore('vault', () => {
     if (!password) return false
     try {
       await navigator.clipboard.writeText(password)
+      if (shouldUseVaultFallback()) {
+        events.value = addDevVaultEvent(itemId, 'copied_password')
+        return true
+      }
       await invoke<boolean>('vault_log_copy', { itemId, field: 'password' })
       await refreshEvents()
       return true
@@ -717,6 +912,9 @@ export const useVaultStore = defineStore('vault', () => {
   ): Promise<string | null> {
     clearError()
     try {
+      if (shouldUseVaultFallback()) {
+        return generateFallbackPassword(length, includeSymbols, includeDigits, avoidAmbiguous)
+      }
       return await invoke<string>('vault_generate_password', {
         length,
         includeSymbols,
