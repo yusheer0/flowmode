@@ -397,19 +397,19 @@ export const useNotesStore = defineStore('notes', () => {
     return layers.value.length < MAX_LAYERS
   }
 
-  function createCustomLayer(name: string): { success: boolean; error?: string } {
+  function createCustomLayer(name: string): { success: boolean; error?: string; code?: string } {
     const normalizedName = name.trim()
 
     if (!normalizedName) {
-      return { success: false, error: 'Введите название слоя' }
+      return { success: false, error: 'Введите название слоя', code: 'LAYER_NAME_REQUIRED' }
     }
 
     if (!canCreateCustomLayer()) {
-      return { success: false, error: 'Достигнут лимит: максимум 5 слоев' }
+      return { success: false, error: 'Достигнут лимит: максимум 5 слоев', code: 'LAYER_LIMIT_REACHED' }
     }
 
     if (layers.value.some(layer => layer.name.toLowerCase() === normalizedName.toLowerCase())) {
-      return { success: false, error: 'Слой с таким названием уже существует' }
+      return { success: false, error: 'Слой с таким названием уже существует', code: 'LAYER_NAME_EXISTS' }
     }
 
     const newLayer: NotesLayer = {
@@ -428,18 +428,18 @@ export const useNotesStore = defineStore('notes', () => {
     return { success: true }
   }
 
-  function deleteLayer(layerId: string): { success: boolean; error?: string } {
+  function deleteLayer(layerId: string): { success: boolean; error?: string; code?: string } {
     if (!isExistingLayer(layerId)) {
-      return { success: false, error: 'Слой не найден' }
+      return { success: false, error: 'Слой не найден', code: 'LAYER_NOT_FOUND' }
     }
 
     if (layers.value.length <= 1) {
-      return { success: false, error: 'Нельзя удалить последний слой' }
+      return { success: false, error: 'Нельзя удалить последний слой', code: 'LAYER_DELETE_LAST_BLOCKED' }
     }
 
     const fallbackLayer = layers.value.find(layer => layer.id !== layerId)
     if (!fallbackLayer) {
-      return { success: false, error: 'Слой назначения не найден' }
+      return { success: false, error: 'Слой назначения не найден', code: 'LAYER_TARGET_NOT_FOUND' }
     }
 
     const now = new Date().toISOString()

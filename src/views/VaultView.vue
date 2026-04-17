@@ -1,109 +1,84 @@
 <template>
   <section :class="$style.vaultView">
-    <div v-if="vaultStore.error" :class="$style.errorBanner">
-      {{ vaultStore.error }}
-    </div>
-
     <div :class="$style.canvas">
       <div :class="$style.listPane">
-        <article
+        <VaultItemCard
           v-for="item in filteredItems"
           :key="item.id"
-          :class="$style.card"
-          @click="openEditModal(item)"
-        >
-          <h3 :class="$style.cardTitle">{{ item.title }}</h3>
-          <p :class="$style.cardText">
-            <strong>{{ t('loginLabel') }}:</strong> {{ item.username }}
-          </p>
-          <p :class="$style.cardText">
-            <strong>{{ t('passwordLabel') }}:</strong> {{ item.passwordMasked }}
-          </p>
-          <p v-if="item.url" :class="$style.cardText">
-            <strong>URL:</strong> {{ item.url }}
-          </p>
-          <div :class="$style.actions">
-            <button
-              :class="$style.cardAction"
-              type="button"
-              :title="t('delete')"
-              @click.stop="requestDelete(item.id)"
-            >
-              <Trash2 :size="14" />
-            </button>
-          </div>
-        </article>
+          :item="item"
+          :styles="$style"
+          :login-label="t('loginLabel')"
+          :password-label="t('passwordLabel')"
+          :delete-title="t('delete')"
+          @edit="openEditModal"
+          @delete="requestDelete"
+        />
         <p v-if="!filteredItems.length" :class="$style.emptyState">
           {{ t('emptyState') }}
         </p>
       </div>
     </div>
 
-    <SheetModal
+    <VaultEntrySheet
       :is-open="isFormModalOpen"
-      :transition-name="isEditing ? 'top-sheet' : 'sheet'"
-      :overlay-class="isEditing ? $style.topModalOverlay : $style.modalOverlay"
-      :sheet-class="isEditing ? [$style.modalSheet, $style.topModalSheet] : $style.modalSheet"
-      :close-button-class="$style.modalClose"
-      :title-class="$style.modalTitle"
-      :title="isEditing ? t('editTitle') : t('createTitle')"
-      :close-title="t('close')"
-      :close-on-overlay="false"
+      :is-editing="isEditing"
+      :title-value="form.title"
+      :username-value="form.username"
+      :password-value="form.password"
+      :url-value="form.url"
+      :is-password-visible="isPasswordVisible"
+      :edit-password-mask="editPasswordMask"
+      :is-login-copied="isLoginCopied"
+      :is-password-copied="isPasswordCopied"
+      :can-save="canSaveForm"
+      :styles="$style"
+      :labels="entryLabels"
       @close="closeFormModal"
-    >
-      <input v-model.trim="form.title" :class="$style.modalInput" :placeholder="t('titlePlaceholder')" />
-      <input v-model.trim="form.username" :class="$style.modalInput" :placeholder="t('usernamePlaceholder')" />
-      <input v-model="form.password" :class="$style.modalInput" :placeholder="t('passwordPlaceholder')" />
-      <input v-model.trim="form.url" :class="$style.modalInput" :placeholder="t('urlPlaceholder')" />
+      @save="saveForm"
+      @update:title="(value) => (form.title = value)"
+      @update:username="(value) => (form.username = value)"
+      @update:password="(value) => (form.password = value)"
+      @update:url="(value) => (form.url = value)"
+      @password-input="handlePasswordInput"
+      @toggle-password="togglePasswordVisibility"
+      @copy-login="copyEditingLogin"
+      @copy-password="copyEditingPassword"
+      @open-url="openUrl"
+    />
 
-      <div :class="$style.modalActions">
-        <button :class="$style.modalCancelButton" type="button" @click="closeFormModal">{{ t('cancel') }}</button>
-        <button :class="$style.modalSaveButton" type="button" @click="saveForm">{{ t('save') }}</button>
-      </div>
-    </SheetModal>
-
-    <SheetModal
+    <ConfirmSheet
       :is-open="isDeleteConfirmModalOpen"
-      :overlay-class="[$style.modalOverlay, $style.deleteConfirmOverlay]"
-      :sheet-class="$style.modalSheet"
-      :title-class="$style.modalTitle"
       :title="t('deleteConfirmTitle')"
-      :show-close="false"
+      :message="t('deleteConfirmDescription')"
+      :cancel-label="t('cancel')"
+      :confirm-label="t('delete')"
+      :styles="$style"
       @close="closeDeleteConfirmModal"
-    >
-      <p :class="$style.confirmMessage">{{ t('deleteConfirmDescription') }}</p>
-      <div :class="$style.confirmActions">
-        <button :class="$style.modalCancelButton" type="button" @click="closeDeleteConfirmModal">
-          {{ t('cancel') }}
-        </button>
-        <button :class="$style.modalDeleteButton" type="button" @click="confirmDelete">
-          {{ t('delete') }}
-        </button>
-      </div>
-    </SheetModal>
+      @cancel="closeDeleteConfirmModal"
+      @confirm="confirmDelete"
+    />
 
-    <SheetModal
+    <SearchSheet
       :is-open="isSearchModalOpen"
-      :overlay-class="$style.modalOverlay"
-      :sheet-class="[$style.modalSheet, $style.searchSheet]"
-      :close-button-class="$style.modalClose"
-      :title-class="$style.modalTitle"
       :title="t('searchTitle')"
       :close-title="t('close')"
+      :placeholder="t('searchPlaceholder')"
+      :model-value="searchQuery"
+      :styles="$style"
       @close="closeSearchModal"
-    >
-      <div :class="$style.searchField">
-        <Search :size="16" />
-        <input
-          v-model.trim="searchQuery"
-          :class="$style.searchInput"
-          :placeholder="t('searchPlaceholder')"
-          autofocus
-        />
-      </div>
-    </SheetModal>
+      @update:model-value="updateSearchQuery"
+    />
 
     <nav :class="$style.bottomDock">
+      <button
+        v-if="embedded"
+        :class="$style.dockButton"
+        type="button"
+        :title="t('notesViewTitle')"
+        @click="emit('close')"
+      >
+        <ArrowLeft :size="20" />
+      </button>
       <button :class="$style.dockButton" type="button" :title="t('createEntry')" @click="openCreateModal">
         <SquarePlus :size="20" />
       </button>
@@ -120,184 +95,82 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { Search, SquarePlus, Trash2 } from 'lucide-vue-next'
-import SheetModal from '@/components/SheetModal.vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ArrowLeft, Search, SquarePlus } from 'lucide-vue-next'
+import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
+import SearchSheet from '@/components/common/SearchSheet.vue'
+import VaultEntrySheet from '@/components/vault/VaultEntrySheet.vue'
+import VaultItemCard from '@/components/vault/VaultItemCard.vue'
+import { useCopyFeedback } from '@/composables/useCopyFeedback'
+import { useVaultEntryForm } from '@/composables/useVaultEntryForm'
+import { useVaultListFilter } from '@/composables/useVaultListFilter'
 import { useSettingsStore, useVaultStore } from '@/stores'
-import type { VaultItem, VaultItemInput } from '@/types'
+import { TRANSLATIONS } from '@/translations/translations'
+import type { VaultItem } from '@/types'
+import { normalizeUrl } from '@/utils/vault'
+
+withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false,
+})
+
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
 
 const vaultStore = useVaultStore()
 const settingsStore = useSettingsStore()
 
 const searchQuery = ref('')
-const isFormModalOpen = ref(false)
 const isSearchModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
-const isEditing = ref(false)
-const editingId = ref<string | null>(null)
 const pendingDeleteItemId = ref<string | null>(null)
-const form = ref({
-  title: '',
-  username: '',
-  password: '',
-  url: '',
-})
 
-const TRANSLATIONS = {
-  ru: {
-    vaultTitle: 'Password Vault',
-    searchTitle: 'Поиск',
-    searchPlaceholder: 'Поиск по vault...',
-    createEntry: 'Новая запись',
-    loginLabel: 'Логин',
-    passwordLabel: 'Пароль',
-    reveal: 'Показать',
-    copyLogin: 'Коп. логин',
-    copyPassword: 'Коп. пароль',
-    edit: 'Изменить',
-    delete: 'Удалить',
-    emptyState: 'Записей не найдено',
-    createTitle: 'Добавить запись',
-    editTitle: 'Редактировать запись',
-    titlePlaceholder: 'Название',
-    usernamePlaceholder: 'Логин',
-    passwordPlaceholder: 'Пароль',
-    urlPlaceholder: 'URL (опционально)',
-    cancel: 'Отмена',
-    save: 'Сохранить',
-    revealTitle: 'Временный показ пароля',
-    revealHint: 'Пароль хранится в памяти временно и автоматически скрывается.',
-    close: 'Закрыть',
-    created: 'Создано',
-    updated: 'Обновлено',
-    deleted: 'Удалено',
-    revealed: 'Пароль показан',
-    copied_login: 'Скопирован логин',
-    copied_password: 'Скопирован пароль',
-    deleteConfirmTitle: 'Подтвердите удаление',
-    deleteConfirmDescription: 'Запись будет удалена из vault без возможности восстановления.',
-  },
-  en: {
-    vaultTitle: 'Password Vault',
-    searchTitle: 'Search',
-    searchPlaceholder: 'Search vault...',
-    createEntry: 'New entry',
-    loginLabel: 'Login',
-    passwordLabel: 'Password',
-    reveal: 'Reveal',
-    copyLogin: 'Copy login',
-    copyPassword: 'Copy password',
-    edit: 'Edit',
-    delete: 'Delete',
-    emptyState: 'No records found',
-    createTitle: 'Create record',
-    editTitle: 'Edit record',
-    titlePlaceholder: 'Title',
-    usernamePlaceholder: 'Username',
-    passwordPlaceholder: 'Password',
-    urlPlaceholder: 'URL (optional)',
-    cancel: 'Cancel',
-    save: 'Save',
-    revealTitle: 'Temporary password reveal',
-    revealHint: 'Password is cached in memory for a short time and then hidden.',
-    close: 'Close',
-    created: 'Created',
-    updated: 'Updated',
-    deleted: 'Deleted',
-    revealed: 'Password revealed',
-    copied_login: 'Login copied',
-    copied_password: 'Password copied',
-    deleteConfirmTitle: 'Confirm deletion',
-    deleteConfirmDescription: 'This record will be permanently deleted from vault.',
-  },
-} as const
+const {
+  form,
+  isFormModalOpen,
+  isEditing,
+  editingId,
+  isPasswordVisible,
+  editPasswordMask,
+  canSaveForm,
+  openCreateModal: openCreateEntryModal,
+  openEditModal: openEditEntryModal,
+  closeFormModal,
+  togglePasswordVisibility,
+  handlePasswordInput,
+  saveForm,
+  cleanup,
+} = useVaultEntryForm(vaultStore)
+
+const { isLoginCopied, isPasswordCopied, activate, resetState, clearTimers } = useCopyFeedback()
+const { filteredItems } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
-
-function normalizeSearchValue(value: unknown): string {
-  return typeof value === 'string' ? value.toLowerCase() : ''
-}
-
-const filteredItems = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-  return vaultStore.items.filter((item) => {
-    const title = normalizeSearchValue(item.title)
-    const username = normalizeSearchValue(item.username)
-    const service = normalizeSearchValue(item.service)
-    const url = normalizeSearchValue(item.url)
-    const textPass = !query
-      || title.includes(query)
-      || username.includes(query)
-      || service.includes(query)
-      || url.includes(query)
-    return textPass
-  })
-})
-
-function toPayload(): VaultItemInput {
-  return {
-    title: form.value.title,
-    service: form.value.title,
-    username: form.value.username,
-    password: form.value.password,
-    url: form.value.url,
-    notes: '',
-    tags: [],
-  }
-}
-
-function resetForm(): void {
-  form.value = {
-    title: '',
-    username: '',
-    password: '',
-    url: '',
-  }
-  editingId.value = null
-  isEditing.value = false
-}
+const entryLabels = computed(() => ({
+  createTitle: t('createTitle'),
+  editTitle: t('editTitle'),
+  close: t('close'),
+  titlePlaceholder: t('titlePlaceholder'),
+  usernamePlaceholder: t('usernamePlaceholder'),
+  passwordPlaceholder: t('passwordPlaceholder'),
+  urlPlaceholder: t('urlPlaceholder'),
+  copy: t('copy'),
+  copied: t('copied'),
+  hide: t('hide'),
+  reveal: t('reveal'),
+  goToUrl: t('goToUrl'),
+  save: t('save'),
+}))
 
 function openCreateModal(): void {
-  resetForm()
-  isFormModalOpen.value = true
+  resetState()
+  openCreateEntryModal()
 }
 
 function openEditModal(item: VaultItem): void {
-  form.value = {
-    title: item.title,
-    username: item.username,
-    password: '',
-    url: item.url || '',
-  }
-  isEditing.value = true
-  editingId.value = item.id
-  isFormModalOpen.value = true
-}
-
-function closeFormModal(): void {
-  isFormModalOpen.value = false
-  resetForm()
-}
-
-async function saveForm(): Promise<void> {
-  const payload = toPayload()
-  if (isEditing.value && editingId.value) {
-    if (!payload.password) {
-      const existing = await vaultStore.revealPassword(editingId.value)
-      payload.password = existing || ''
-    }
-    const success = await vaultStore.updateItem(editingId.value, payload)
-    if (success) {
-      closeFormModal()
-    }
-    return
-  }
-
-  const success = await vaultStore.createItem(payload)
-  if (success) {
-    closeFormModal()
-  }
+  resetState()
+  openEditEntryModal(item)
 }
 
 function openSearchModal(): void {
@@ -308,6 +181,10 @@ function closeSearchModal(): void {
   isSearchModalOpen.value = false
 }
 
+function updateSearchQuery(value: string): void {
+  searchQuery.value = value.trim()
+}
+
 function toggleSearchModal(): void {
   if (isSearchModalOpen.value) {
     closeSearchModal()
@@ -316,9 +193,40 @@ function toggleSearchModal(): void {
   openSearchModal()
 }
 
-async function requestDelete(itemId: string): Promise<void> {
+function requestDelete(itemId: string): void {
   pendingDeleteItemId.value = itemId
   isDeleteConfirmModalOpen.value = true
+}
+
+async function copyLogin(itemId: string): Promise<void> {
+  const copied = await vaultStore.copyUsername(itemId)
+  if (copied) {
+    activate('login')
+  }
+}
+
+async function copyPassword(itemId: string): Promise<void> {
+  const copied = await vaultStore.copyPassword(itemId)
+  if (copied) {
+    activate('password')
+  }
+}
+
+async function copyEditingLogin(): Promise<void> {
+  if (!editingId.value) return
+  await copyLogin(editingId.value)
+}
+
+async function copyEditingPassword(): Promise<void> {
+  if (!editingId.value) return
+  await copyPassword(editingId.value)
+}
+
+function openUrl(url?: string): void {
+  if (!url) return
+  const normalized = normalizeUrl(url.trim())
+  if (!normalized) return
+  window.open(normalized, '_blank', 'noopener,noreferrer')
 }
 
 function closeDeleteConfirmModal(): void {
@@ -334,6 +242,11 @@ async function confirmDelete(): Promise<void> {
 
 onMounted(async () => {
   await vaultStore.refreshItems()
+})
+
+onBeforeUnmount(() => {
+  cleanup()
+  clearTimers()
 })
 </script>
 

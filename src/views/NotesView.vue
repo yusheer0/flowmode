@@ -1,27 +1,36 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Layers3, Heart, Search, Cog, SquarePlus, Trash2, X, Grid2x2, Bookmark } from 'lucide-vue-next'
+import { Layers3, Search, Cog, SquarePlus, X, Grid2x2 } from 'lucide-vue-next'
+import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
+import SearchSheet from '@/components/common/SearchSheet.vue'
+import NoteCard from '@/components/notes/NoteCard.vue'
+import NoteFormSheet from '@/components/notes/NoteFormSheet.vue'
+import { useNotesSheets } from '@/composables/useNotesSheets'
 import { useNotesStore, useSettingsStore } from '@/stores'
 import type { Note } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
 import { useAppUpdater } from '@/composables/useAppUpdater'
 import VaultView from '@/views/VaultView.vue'
 import { TRANSLATIONS } from '@/translations/translations'
+import { getNoteBackground, NOTE_COLORS } from '@/utils/noteVisuals'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
-const NOTE_COLORS = {
-  default: '#8c8c94',
-  low: '#7b8fb8',
-  medium: '#b89565',
-  high: '#b96464',
-} as const
 const activeView = ref<'notes' | 'vault'>('notes')
 const searchQuery = ref('')
-const isSearchModalOpen = ref(false)
-const isSettingsModalOpen = ref(false)
-const isAboutModalOpen = ref(false)
-const isLayerModalOpen = ref(false)
+const {
+  isSearchModalOpen,
+  isSettingsModalOpen,
+  isAboutModalOpen,
+  isLayerModalOpen,
+  closeSecondarySheets,
+  openSettingsModal,
+  closeSettingsModal,
+  openAboutModal,
+  closeAboutModal,
+  openLayerModal: openLayerSheet,
+  closeLayerModal: closeLayerSheet,
+} = useNotesSheets()
 const isCreateModalOpen = ref(false)
 const newNoteBody = ref('')
 const selectedCreateCriticality = ref<Note['criticality'] | ''>('')
@@ -32,6 +41,8 @@ const editNoteCriticality = ref<Note['criticality'] | ''>('')
 const isDeleteConfirmModalOpen = ref(false)
 const pendingDeleteNoteId = ref<string | null>(null)
 const pendingDeleteFromEditModal = ref(false)
+const isLayerDeleteConfirmModalOpen = ref(false)
+const pendingDeleteLayerId = ref<string | null>(null)
 const newLayerName = ref('')
 const layerFormError = ref('')
 const githubUrl = 'https://github.com/yusheer0/flowmode'
@@ -115,47 +126,29 @@ function closeSearchModal(): void {
   isSearchModalOpen.value = false
 }
 
-function openSettingsModal(): void {
-  closeSecondarySheets()
-  isSettingsModalOpen.value = true
-}
-
-function closeSettingsModal(): void {
-  isSettingsModalOpen.value = false
-}
-
 function openLayerModal(): void {
-  closeSecondarySheets()
   newLayerName.value = ''
   layerFormError.value = ''
-  isLayerModalOpen.value = true
-}
-
-function openAboutModal(): void {
-  closeSecondarySheets()
-  isAboutModalOpen.value = true
-}
-
-function closeAboutModal(): void {
-  isAboutModalOpen.value = false
+  openLayerSheet()
 }
 
 function closeLayerModal(): void {
   if (hasNoLayers.value) return
   layerFormError.value = ''
-  isLayerModalOpen.value = false
+  closeDeleteLayerConfirm()
+  closeLayerSheet()
 }
 
 function selectLayer(layerId: string): void {
   notesStore.setActiveLayer(layerId)
-  isLayerModalOpen.value = false
+  closeLayerSheet()
 }
 
 function createLayer(): void {
   if (!canSubmitLayer.value) return
   const result = notesStore.createCustomLayer(newLayerName.value)
   if (!result.success) {
-    layerFormError.value = mapLayerError(result.error)
+    layerFormError.value = mapLayerError(result.code, result.error)
     return
   }
 
@@ -164,15 +157,33 @@ function createLayer(): void {
 }
 
 function deleteLayer(layerId: string): void {
+  pendingDeleteLayerId.value = layerId
+  isLayerDeleteConfirmModalOpen.value = true
+}
+
+function closeDeleteLayerConfirm(): void {
+  isLayerDeleteConfirmModalOpen.value = false
+  pendingDeleteLayerId.value = null
+}
+
+function confirmDeleteLayer(): void {
+  if (!pendingDeleteLayerId.value) return
+
+  const layerId = pendingDeleteLayerId.value
+  closeDeleteLayerConfirm()
+
   const result = notesStore.deleteLayer(layerId)
   if (!result.success) {
-    layerFormError.value = mapLayerDeleteError(result.error)
+    layerFormError.value = mapLayerDeleteError(result.code, result.error)
     return
   }
   layerFormError.value = ''
 }
 
-function mapLayerError(error?: string): string {
+function mapLayerError(code?: string, error?: string): string {
+  if (code === 'LAYER_NAME_REQUIRED') return t('layerNameRequired')
+  if (code === 'LAYER_NAME_EXISTS') return t('layerNameExists')
+  if (code === 'LAYER_LIMIT_REACHED') return t('layerLimitReached')
   if (!error) return t('customLayerCreateFailed')
   if (error.includes('Введите название слоя')) return t('layerNameRequired')
   if (error.includes('уже существует')) return t('layerNameExists')
@@ -180,7 +191,10 @@ function mapLayerError(error?: string): string {
   return t('customLayerCreateFailed')
 }
 
-function mapLayerDeleteError(error?: string): string {
+function mapLayerDeleteError(code?: string, error?: string): string {
+  if (code === 'LAYER_DELETE_LAST_BLOCKED') return t('layerDeleteLastBlocked')
+  if (code === 'LAYER_NOT_FOUND') return t('layerDeleteNotFound')
+  if (code === 'LAYER_TARGET_NOT_FOUND') return t('layerDeleteNotFound')
   if (!error) return t('layerDeleteFailed')
   if (error.includes('последний слой')) return t('layerDeleteLastBlocked')
   if (error.includes('не найден')) return t('layerDeleteNotFound')
@@ -193,13 +207,6 @@ function updateLanguage(value: 'ru' | 'en'): void {
 
 function updateTheme(value: 'light' | 'dark'): void {
   settingsStore.updateSettings({ theme: value })
-}
-
-function closeSecondarySheets(): void {
-  isSearchModalOpen.value = false
-  isSettingsModalOpen.value = false
-  isAboutModalOpen.value = false
-  isLayerModalOpen.value = false
 }
 
 function createNote(): void {
@@ -232,14 +239,6 @@ function saveEditedNote(): void {
 function deleteEditedNote(): void {
   if (!editNoteId.value) return
   openDeleteNoteConfirm(editNoteId.value, true)
-}
-
-function getNoteBackground(note: Note): string {
-  if (note.criticality) {
-    return NOTE_COLORS[note.criticality]
-  }
-
-  return note.backgroundColor || NOTE_COLORS.default
 }
 
 function toggleImportant(noteId: string): void {
@@ -276,6 +275,26 @@ function switchView(view: 'notes' | 'vault'): void {
   activeView.value = view
 }
 
+function updateSearchQuery(value: string): void {
+  searchQuery.value = value.trim()
+}
+
+function updateCreateBody(value: string): void {
+  newNoteBody.value = value
+}
+
+function updateCreateCriticality(value: Note['criticality'] | ''): void {
+  selectedCreateCriticality.value = value
+}
+
+function updateEditBody(value: string): void {
+  editNoteBody.value = value
+}
+
+function updateEditCriticality(value: Note['criticality'] | ''): void {
+  editNoteCriticality.value = value
+}
+
 onMounted(async () => {
   await Promise.all([settingsStore.init(), notesStore.init(), loadAppVersion()])
 
@@ -289,37 +308,18 @@ onMounted(async () => {
 <template>
   <section :class="$style.notesView">
     <div v-if="activeView === 'notes'" :class="$style.canvas">
-      <article
+      <NoteCard
         v-for="note in filteredNotes"
         :key="note.id"
-        :class="[$style.noteCard, { [$style.noteCardPinned]: note.isImportant }]"
-        :style="{ backgroundColor: getNoteBackground(note) }"
-        @click="openEditModal(note)"
-      >
-        <span v-if="note.isImportant" :class="$style.pinnedBadge" aria-hidden="true">
-          <Bookmark :size="28" fill="#ffffff" />
-        </span>
-        <p :class="$style.noteContent">{{ note.content }}</p>
-
-        <div :class="$style.noteActions">
-          <button
-            :class="[$style.cardAction, { [$style.cardActionActive]: note.isImportant }]"
-            type="button"
-            title="Закрепить"
-            @click.stop="toggleImportant(note.id)"
-          >
-            <Heart :size="14" />
-          </button>
-          <button
-            :class="$style.cardAction"
-            type="button"
-            title="Удалить"
-            @click.stop="deleteNote(note.id)"
-          >
-            <Trash2 :size="14" />
-          </button>
-        </div>
-      </article>
+        :note="note"
+        :styles="$style"
+        :background-color="getNoteBackground(note)"
+        :pin-title="t('pinNoteTitle')"
+        :delete-title="t('deleteNoteTitle')"
+        @edit="openEditModal"
+        @toggle-important="toggleImportant"
+        @delete="deleteNote"
+      />
     </div>
     <VaultView
       v-else
@@ -330,177 +330,77 @@ onMounted(async () => {
 
     <!-- Create Modal -->
     <template v-if="activeView === 'notes'">
-      <SheetModal
+      <NoteFormSheet
         :is-open="isCreateModalOpen"
-        :overlay-class="$style.modalOverlay"
-        :sheet-class="$style.modalSheet"
-        :close-button-class="$style.modalClose"
-        :title-class="$style.modalTitle"
-        :title="t('newNoteTitle')"
-        :close-title="t('close')"
-        :close-on-overlay="false"
+        :is-edit="false"
+        :body="newNoteBody"
+        :criticality="selectedCreateCriticality"
+        :is-submit-enabled="isCreateEnabled"
+        :options="CRITICALITY_OPTIONS"
+        :styles="$style"
+        :labels="{
+          createTitle: t('newNoteTitle'),
+          editTitle: t('editNoteTitle'),
+          close: t('close'),
+          bodyPlaceholder: t('noteBodyPlaceholder'),
+          criticalityLabel: t('criticalityLabel'),
+          createButton: t('createButton'),
+          saveButton: t('saveButton'),
+          deleteButton: t('deleteButton'),
+        }"
         @close="closeCreateModal"
-      >
-        <textarea
-          v-model.trim="newNoteBody"
-          :class="$style.modalTextarea"
-          :placeholder="t('noteBodyPlaceholder')"
-          autofocus
-        />
-        <div :class="$style.criticalityPicker">
-          <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
-          <div
-            :class="$style.criticalityOptions"
-            role="radiogroup"
-            :aria-label="t('criticalityLabel')"
-          >
-            <button
-              v-for="option in CRITICALITY_OPTIONS"
-              :key="option.value"
-              type="button"
-              :class="[
-                $style.criticalityOption,
-                {
-                  [$style.criticalityOptionLow]: option.value === 'low',
-                  [$style.criticalityOptionMedium]: option.value === 'medium',
-                  [$style.criticalityOptionHigh]: option.value === 'high',
-                },
-                {
-                  [$style.criticalityOptionActive]:
-                    selectedCreateCriticality === option.value,
-                },
-              ]"
-              role="radio"
-              :aria-checked="selectedCreateCriticality === option.value"
-              @click="selectedCreateCriticality = option.value"
-            >
-              <span>{{ option.label }}</span>
-            </button>
-          </div>
-        </div>
+        @update:body="updateCreateBody"
+        @update:criticality="updateCreateCriticality"
+        @submit="createNote"
+      />
 
-        <button
-          :class="$style.modalCreateButton"
-          type="button"
-          :disabled="!isCreateEnabled"
-          @click="createNote"
-        >
-          {{ t('createButton') }}
-        </button>
-      </SheetModal>
-
-      <!-- Edit Modal -->
-      <SheetModal
+      <NoteFormSheet
         :is-open="isEditModalOpen"
-        transition-name="top-sheet"
-        :overlay-class="$style.topModalOverlay"
-        :sheet-class="[$style.modalSheet, $style.topModalSheet]"
-        :close-button-class="$style.modalClose"
-        :title-class="$style.modalTitle"
-        :title="t('editNoteTitle')"
-        :close-title="t('close')"
-        :close-on-overlay="false"
+        :is-edit="true"
+        :body="editNoteBody"
+        :criticality="editNoteCriticality"
+        :is-submit-enabled="isEditEnabled"
+        :options="CRITICALITY_OPTIONS"
+        :styles="$style"
+        :labels="{
+          createTitle: t('newNoteTitle'),
+          editTitle: t('editNoteTitle'),
+          close: t('close'),
+          bodyPlaceholder: t('noteBodyPlaceholder'),
+          criticalityLabel: t('criticalityLabel'),
+          createButton: t('createButton'),
+          saveButton: t('saveButton'),
+          deleteButton: t('deleteButton'),
+        }"
         @close="closeEditModal"
-      >
-        <textarea
-          v-model.trim="editNoteBody"
-          :class="$style.modalTextarea"
-          :placeholder="t('noteBodyPlaceholder')"
-          autofocus
-        />
-        <div :class="$style.criticalityPicker">
-          <span :class="$style.criticalityLabel">{{ t('criticalityLabel') }}</span>
-          <div
-            :class="$style.criticalityOptions"
-            role="radiogroup"
-            :aria-label="t('criticalityLabel')"
-          >
-            <button
-              v-for="option in CRITICALITY_OPTIONS"
-              :key="`edit-${option.value}`"
-              type="button"
-              :class="[
-                $style.criticalityOption,
-                {
-                  [$style.criticalityOptionLow]: option.value === 'low',
-                  [$style.criticalityOptionMedium]: option.value === 'medium',
-                  [$style.criticalityOptionHigh]: option.value === 'high',
-                },
-                {
-                  [$style.criticalityOptionActive]:
-                    editNoteCriticality === option.value,
-                },
-              ]"
-              role="radio"
-              :aria-checked="editNoteCriticality === option.value"
-              @click="editNoteCriticality = option.value"
-            >
-              <span>{{ option.label }}</span>
-            </button>
-          </div>
-        </div>
+        @update:body="updateEditBody"
+        @update:criticality="updateEditCriticality"
+        @submit="saveEditedNote"
+        @delete="deleteEditedNote"
+      />
 
-        <div :class="$style.editModalActions">
-          <button
-            :class="$style.modalDeleteButton"
-            type="button"
-            @click="deleteEditedNote"
-          >
-            {{ t('deleteButton') }}
-          </button>
-          <button
-            :class="$style.modalSaveButton"
-            type="button"
-            :disabled="!isEditEnabled"
-            @click="saveEditedNote"
-          >
-            {{ t('saveButton') }}
-          </button>
-        </div>
-      </SheetModal>
-
-      <!-- Delete Confirm Modal -->
-      <SheetModal
+      <ConfirmSheet
         :is-open="isDeleteConfirmModalOpen"
-        :overlay-class="[$style.modalOverlay, $style.deleteConfirmOverlay]"
-        :sheet-class="$style.modalSheet"
-        :title-class="$style.modalTitle"
         :title="t('deleteConfirmTitle')"
-        :show-close="false"
+        :message="t('deleteConfirmMessage')"
+        :cancel-label="t('cancelButton')"
+        :confirm-label="t('deleteButton')"
+        :styles="$style"
         @close="closeDeleteNoteConfirm"
-      >
-        <p :class="$style.confirmMessage">{{ t('deleteConfirmMessage') }}</p>
-        <div :class="$style.confirmActions">
-          <button :class="$style.modalCancelButton" type="button" @click="closeDeleteNoteConfirm">
-            {{ t('cancelButton') }}
-          </button>
-          <button :class="$style.modalDeleteButton" type="button" @click="confirmDeleteNote">
-            {{ t('deleteButton') }}
-          </button>
-        </div>
-      </SheetModal>
+        @cancel="closeDeleteNoteConfirm"
+        @confirm="confirmDeleteNote"
+      />
 
-      <!-- Search Modal -->
-      <SheetModal
+      <SearchSheet
         :is-open="isSearchModalOpen"
-        :overlay-class="$style.modalOverlay"
-        :sheet-class="[$style.modalSheet, $style.searchSheet]"
-        :close-button-class="$style.modalClose"
-        :title-class="$style.modalTitle"
         :title="t('searchTitle')"
         :close-title="t('close')"
+        :placeholder="t('searchPlaceholder')"
+        :model-value="searchQuery"
+        :styles="$style"
         @close="closeSearchModal"
-      >
-        <div :class="$style.searchField">
-          <Search :size="16" />
-          <input
-            v-model.trim="searchQuery"
-            :class="$style.searchInput"
-            :placeholder="t('searchPlaceholder')"
-            autofocus
-          />
-        </div>
-      </SheetModal>
+        @update:model-value="updateSearchQuery"
+      />
 
       <!-- Settings Modal -->
       <SheetModal
@@ -702,6 +602,7 @@ onMounted(async () => {
               :class="$style.layerCreateInput"
               :disabled="!canCreateCustomLayer"
               :placeholder="t('newLayerPlaceholder')"
+              @keydown.enter.prevent="createLayer"
             />
             <button
               :class="$style.layerCreateButton"
@@ -718,6 +619,19 @@ onMounted(async () => {
           <p v-if="layerFormError" :class="$style.layerError">{{ layerFormError }}</p>
         </div>
       </SheetModal>
+
+      <!-- Layer Delete Confirm Modal -->
+      <ConfirmSheet
+        :is-open="isLayerDeleteConfirmModalOpen"
+        :title="t('layerDeleteConfirmTitle')"
+        :message="t('layerDeleteConfirmMessage')"
+        :cancel-label="t('cancelButton')"
+        :confirm-label="t('deleteButton')"
+        :styles="$style"
+        @close="closeDeleteLayerConfirm"
+        @cancel="closeDeleteLayerConfirm"
+        @confirm="confirmDeleteLayer"
+      />
     </template>
 
     <!-- View Dock -->

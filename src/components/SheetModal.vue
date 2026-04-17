@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 
 type ClassValue = string | string[] | Record<string, boolean> | undefined
@@ -41,6 +42,27 @@ function handleOverlayClick(): void {
   if (!props.closeOnOverlay) return
   requestClose()
 }
+
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented || event.key !== 'Escape') return
+  event.preventDefault()
+  requestClose()
+}
+
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      window.addEventListener('keydown', handleWindowKeydown)
+      return
+    }
+    window.removeEventListener('keydown', handleWindowKeydown)
+  },
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleWindowKeydown)
+})
 </script>
 
 <template>
