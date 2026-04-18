@@ -1,6 +1,6 @@
 {
   "name": "flowmode",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Ежедневник на Tauri + Vue",
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/bitter": "^5.2.10",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
     "@tauri-apps/plugin-notification": "^2.3.3",
