@@ -1,4 +1,4 @@
-﻿#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::io;
 
@@ -9,11 +9,12 @@ use tauri::{
 };
 use tauri_plugin_notification::NotificationExt;
 
-mod storage;
 mod security;
+mod storage;
 mod updates;
 mod vault;
 
+/// Show the main window
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let was_visible = window.is_visible().unwrap_or(false);
@@ -30,6 +31,7 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// Hide the main window to the tray
 fn hide_main_window_to_tray(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.set_skip_taskbar(true);
@@ -37,6 +39,7 @@ fn hide_main_window_to_tray(app: &tauri::AppHandle) {
     }
 }
 
+/// Main function
 fn main() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -70,8 +73,7 @@ fn main() {
         ]);
 
     builder = builder.setup(|app| {
-        let database = storage::create_database_state(&app.handle())
-            .map_err(io::Error::other)?;
+        let database = storage::create_database_state(app.handle()).map_err(io::Error::other)?;
         app.manage(database);
 
         let show_i = MenuItem::with_id(app, "show", "Показать", true, None::<&str>)?;

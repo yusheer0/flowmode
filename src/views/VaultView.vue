@@ -73,15 +73,19 @@
 
     <nav :class="$style.bottomDock">
       <button
-        v-if="embedded"
         :class="$style.dockButton"
         type="button"
         :title="t('notesViewTitle')"
-        @click="emit('close')"
+        @click="navigateToNotes"
       >
         <ArrowLeft :size="20" />
       </button>
-      <button :class="$style.dockButton" type="button" :title="t('createEntry')" @click="openCreateModal">
+      <button
+        :class="$style.dockButton"
+        type="button"
+        :title="t('createEntry')"
+        @click="openCreateModal"
+      >
         <SquarePlus :size="20" />
       </button>
       <button
@@ -110,14 +114,16 @@ import { useSettingsStore, useVaultStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import type { VaultItem } from '@/types'
 import { normalizeUrl } from '@/utils/vault'
+import { useRouter } from 'vue-router'
 
-withDefaults(defineProps<{ embedded?: boolean }>(), {
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
   embedded: false,
 })
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+const router = useRouter()
 
 const vaultStore = useVaultStore()
 const settingsStore = useSettingsStore()
@@ -189,6 +195,14 @@ const entryLabels = computed(() => ({
 function openCreateModal(): void {
   resetState()
   openCreateEntryModal()
+}
+
+function navigateToNotes(): void {
+  if (props.embedded) {
+    emit('close')
+    return
+  }
+  void router.push('/notes')
 }
 
 function openEditModal(item: VaultItem): void {

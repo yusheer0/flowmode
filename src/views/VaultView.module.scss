@@ -3,7 +3,7 @@
   height: 100%;
   background: #dcdcdc;
   overflow: hidden;
-  padding: 0;
+  padding: 8px;
 }
 
 .canvas {
@@ -122,7 +122,6 @@
 .modalOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(24, 24, 28, 0.24);
   z-index: 8;
   display: flex;
   align-items: flex-end;
@@ -136,12 +135,11 @@
 .topModalOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(24, 24, 28, 0.24);
   z-index: 9;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 12px;
+  padding: 20px;
 }
 
 .modalSheet {
@@ -152,7 +150,7 @@
   padding: 18px;
   border-radius: 18px 18px 0 0;
   background: #ffffff;
-  box-shadow: 0 -14px 28px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -321,7 +319,7 @@
 .bottomDock {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 8px;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
@@ -355,7 +353,7 @@
 
 :global(.sheet-enter-active),
 :global(.sheet-leave-active) {
-  transition: background-color 0.5s ease;
+  transition: none;
 }
 
 :global(.sheet-enter-active) .modalSheet,
@@ -365,7 +363,7 @@
 
 :global(.sheet-enter-from),
 :global(.sheet-leave-to) {
-  background-color: rgba(24, 24, 28, 0);
+  background-color: transparent;
 }
 
 :global(.sheet-enter-from) .modalSheet,
@@ -375,12 +373,12 @@
 
 :global(.sheet-enter-to),
 :global(.sheet-leave-from) {
-  background-color: rgba(24, 24, 28, 0.24);
+  background-color: transparent;
 }
 
 :global(.top-sheet-enter-active),
 :global(.top-sheet-leave-active) {
-  transition: background-color 0.5s ease;
+  transition: none;
 }
 
 :global(.top-sheet-enter-active) .topModalSheet,
@@ -390,7 +388,7 @@
 
 :global(.top-sheet-enter-from),
 :global(.top-sheet-leave-to) {
-  background-color: rgba(24, 24, 28, 0);
+  background-color: transparent;
 }
 
 :global(.top-sheet-enter-from) .topModalSheet,
@@ -401,7 +399,7 @@
 
 :global(.top-sheet-enter-to),
 :global(.top-sheet-leave-from) {
-  background-color: rgba(24, 24, 28, 0.24);
+  background-color: transparent;
 }
 
 :global([data-theme='dark']) .vaultView {

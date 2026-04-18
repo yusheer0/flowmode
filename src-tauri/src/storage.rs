@@ -6,12 +6,16 @@ use rusqlite::{params, params_from_iter, Connection};
 use serde::Serialize;
 use tauri::Manager;
 
+use crate::security::migrate_vault_passwords;
+
 const SQLITE_FILE_NAME: &str = "flowmode.sqlite";
 
+/// Database state
 pub struct DatabaseState {
     pub connection: Mutex<Connection>,
 }
 
+/// Stored note record
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredNoteRecord {
@@ -20,6 +24,7 @@ pub struct StoredNoteRecord {
     updated_at: i64,
 }
 
+/// Open the database
 fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
     let db_dir = app
         .path()
@@ -33,6 +38,15 @@ fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
     let db_path = db_dir.join(SQLITE_FILE_NAME);
     let connection =
         Connection::open(&db_path).map_err(|error| format!("Ошибка открытия SQLite: {}", error))?;
+    connection
+        .execute_batch(
+            r#"
+            PRAGMA journal_mode = WAL;
+            PRAGMA foreign_keys = ON;
+            PRAGMA secure_delete = ON;
+            "#,
+        )
+        .map_err(|error| format!("Ошибка применения PRAGMA SQLite: {}", error))?;
     connection
         .execute_batch(
             r#"
@@ -75,9 +89,12 @@ fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
             "#,
         )
         .map_err(|error| format!("Ошибка инициализации SQLite схемы: {}", error))?;
+    migrate_vault_passwords(app, &connection)
+        .map_err(|error| format!("Ошибка миграции vault-паролей: {}", error))?;
     Ok(connection)
 }
 
+/// Create the database state
 pub fn create_database_state(app: &tauri::AppHandle) -> Result<DatabaseState, String> {
     let connection = open_database(app)?;
     Ok(DatabaseState {
@@ -85,6 +102,7 @@ pub fn create_database_state(app: &tauri::AppHandle) -> Result<DatabaseState, St
     })
 }
 
+/// Get many keys from the database
 #[tauri::command]
 pub fn storage_get_many(
     database: tauri::State<'_, DatabaseState>,
@@ -99,8 +117,7 @@ pub fn storage_get_many(
         .lock()
         .map_err(|_| "Ошибка блокировки SQLite соединения".to_string())?;
     let mut result = HashMap::new();
-    let placeholders = std::iter::repeat("?")
-        .take(keys.len())
+    let placeholders = std::iter::repeat_n("?", keys.len())
         .collect::<Vec<_>>()
         .join(", ");
     let query = format!(
@@ -125,6 +142,7 @@ pub fn storage_get_many(
     Ok(result)
 }
 
+/// Set a key in the database
 #[tauri::command]
 pub fn storage_set(
     database: tauri::State<'_, DatabaseState>,
@@ -150,6 +168,7 @@ pub fn storage_set(
         .map_err(|error| format!("Ошибка записи в SQLite: {}", error))
 }
 
+/// Remove a key from the database
 #[tauri::command]
 pub fn storage_remove(
     database: tauri::State<'_, DatabaseState>,
@@ -165,6 +184,7 @@ pub fn storage_remove(
         .map_err(|error| format!("Ошибка удаления из SQLite: {}", error))
 }
 
+/// Clear all keys from the database
 #[tauri::command]
 pub fn storage_clear_all(database: tauri::State<'_, DatabaseState>) -> Result<bool, String> {
     let connection = database
@@ -184,8 +204,11 @@ pub fn storage_clear_all(database: tauri::State<'_, DatabaseState>) -> Result<bo
         .map_err(|error| format!("Ошибка очистки SQLite: {}", error))
 }
 
+/// List the notes from the database
 #[tauri::command]
-pub fn notes_list(database: tauri::State<'_, DatabaseState>) -> Result<Vec<StoredNoteRecord>, String> {
+pub fn notes_list(
+    database: tauri::State<'_, DatabaseState>,
+) -> Result<Vec<StoredNoteRecord>, String> {
     let connection = database
         .connection
         .lock()
@@ -212,6 +235,7 @@ pub fn notes_list(database: tauri::State<'_, DatabaseState>) -> Result<Vec<Store
         .map_err(|error| format!("Ошибка обработки notes_items: {}", error))
 }
 
+/// Upsert a note in the database
 #[tauri::command]
 pub fn notes_upsert(
     database: tauri::State<'_, DatabaseState>,
@@ -237,11 +261,9 @@ pub fn notes_upsert(
         .map_err(|error| format!("Ошибка записи note в SQLite: {}", error))
 }
 
+/// Remove a note from the database
 #[tauri::command]
-pub fn notes_remove(
-    database: tauri::State<'_, DatabaseState>,
-    id: String,
-) -> Result<bool, String> {
+pub fn notes_remove(database: tauri::State<'_, DatabaseState>, id: String) -> Result<bool, String> {
     let connection = database
         .connection
         .lock()
@@ -252,6 +274,7 @@ pub fn notes_remove(
         .map_err(|error| format!("Ошибка удаления note из SQLite: {}", error))
 }
 
+/// Clear all notes from the database
 #[tauri::command]
 pub fn notes_clear(database: tauri::State<'_, DatabaseState>) -> Result<bool, String> {
     let connection = database

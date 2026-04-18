@@ -5,11 +5,17 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::security::{decrypt_vault_secret, encrypt_vault_secret, is_vault_secret_encrypted};
 use crate::storage::DatabaseState;
+
+/// Default events limit
 const DEFAULT_EVENTS_LIMIT: i64 = 200;
+/// Maximum events limit
 const MAX_EVENTS_LIMIT: i64 = 1000;
+/// Maximum stored events
 const MAX_STORED_EVENTS: i64 = 5000;
 
+/// Vault event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultEvent {
@@ -19,6 +25,7 @@ pub struct VaultEvent {
     created_at: String,
 }
 
+/// Vault stored item
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct VaultStoredItem {
@@ -34,6 +41,7 @@ struct VaultStoredItem {
     updated_at: String,
 }
 
+/// Vault list item
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultListItem {
@@ -49,6 +57,7 @@ pub struct VaultListItem {
     updated_at: String,
 }
 
+/// Vault item input
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VaultItemInput {
@@ -61,6 +70,7 @@ pub struct VaultItemInput {
     tags: Vec<String>,
 }
 
+/// Get current timestamp in milliseconds
 fn now_unix_ms() -> String {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -68,14 +78,17 @@ fn now_unix_ms() -> String {
         .unwrap_or_else(|_| "0".to_string())
 }
 
+/// Generate a random ID
 fn random_id(prefix: &str) -> String {
     format!("{}-{}-{}", prefix, now_unix_ms(), rand::random::<u32>())
 }
 
+/// Parse tags from JSON
 fn parse_tags(tags_json: String) -> Vec<String> {
     serde_json::from_str::<Vec<String>>(&tags_json).unwrap_or_default()
 }
 
+/// Convert a stored item to a list item
 fn to_vault_list_item(item: &VaultStoredItem) -> VaultListItem {
     VaultListItem {
         id: item.id.clone(),
@@ -91,6 +104,7 @@ fn to_vault_list_item(item: &VaultStoredItem) -> VaultListItem {
     }
 }
 
+/// Load vault list items from the database
 fn load_vault_list_items(connection: &Connection) -> Result<Vec<VaultListItem>, String> {
     let mut statement = connection
         .prepare(
@@ -123,7 +137,12 @@ fn load_vault_list_items(connection: &Connection) -> Result<Vec<VaultListItem>, 
         .map_err(|error| format!("Ошибка обработки vault_items: {}", error))
 }
 
-fn append_vault_event(connection: &Connection, item_id: &str, event_type: &str) -> Result<(), String> {
+/// Append a vault event to the database
+fn append_vault_event(
+    connection: &Connection,
+    item_id: &str,
+    event_type: &str,
+) -> Result<(), String> {
     connection
         .execute(
             "INSERT INTO vault_events (id, item_id, event_type, created_at) VALUES (?1, ?2, ?3, ?4)",
@@ -147,12 +166,16 @@ fn append_vault_event(connection: &Connection, item_id: &str, event_type: &str) 
         .map_err(|error| format!("Ошибка очистки истории vault: {}", error))
 }
 
+/// Normalize events pagination
 fn normalize_events_pagination(limit: Option<i64>, offset: Option<i64>) -> (i64, i64) {
-    let normalized_limit = limit.unwrap_or(DEFAULT_EVENTS_LIMIT).clamp(1, MAX_EVENTS_LIMIT);
+    let normalized_limit = limit
+        .unwrap_or(DEFAULT_EVENTS_LIMIT)
+        .clamp(1, MAX_EVENTS_LIMIT);
     let normalized_offset = offset.unwrap_or(0).max(0);
     (normalized_limit, normalized_offset)
 }
 
+/// List vault items
 #[tauri::command]
 pub fn vault_list(database: State<'_, DatabaseState>) -> Result<Vec<VaultListItem>, String> {
     let connection = database
@@ -162,6 +185,7 @@ pub fn vault_list(database: State<'_, DatabaseState>) -> Result<Vec<VaultListIte
     load_vault_list_items(&connection)
 }
 
+/// List vault events
 #[tauri::command]
 pub fn vault_list_events(
     database: State<'_, DatabaseState>,
@@ -226,8 +250,10 @@ pub fn vault_list_events(
         .map_err(|error| format!("Ошибка обработки истории vault: {}", error))
 }
 
+/// Create a vault item
 #[tauri::command]
 pub fn vault_create(
+    app: tauri::AppHandle,
     database: State<'_, DatabaseState>,
     input: VaultItemInput,
 ) -> Result<VaultListItem, String> {
@@ -240,12 +266,13 @@ pub fn vault_create(
         .lock()
         .map_err(|_| "Ошибка блокировки SQLite соединения".to_string())?;
     let now = now_unix_ms();
+    let encrypted_password = encrypt_vault_secret(&app, &input.password)?;
     let item = VaultStoredItem {
         id: random_id("vault"),
         title: input.title.trim().to_string(),
         service: input.service.trim().to_string(),
         username: input.username.trim().to_string(),
-        password: input.password,
+        password: encrypted_password,
         url: input
             .url
             .map(|value| value.trim().to_string())
@@ -289,8 +316,10 @@ pub fn vault_create(
     Ok(to_vault_list_item(&item))
 }
 
+/// Update a vault item
 #[tauri::command]
 pub fn vault_update(
+    app: tauri::AppHandle,
     database: State<'_, DatabaseState>,
     id: String,
     input: VaultItemInput,
@@ -333,12 +362,13 @@ pub fn vault_update(
             .ok_or("Запись не найдена".to_string())?
     };
 
+    let encrypted_password = encrypt_vault_secret(&app, &input.password)?;
     let updated = VaultStoredItem {
         id: existing.id.clone(),
         title: input.title.trim().to_string(),
         service: input.service.trim().to_string(),
         username: input.username.trim().to_string(),
-        password: input.password,
+        password: encrypted_password,
         url: input
             .url
             .map(|value| value.trim().to_string())
@@ -383,6 +413,7 @@ pub fn vault_update(
     Ok(to_vault_list_item(&updated))
 }
 
+/// Delete a vault item
 #[tauri::command]
 pub fn vault_delete(database: State<'_, DatabaseState>, id: String) -> Result<bool, String> {
     let connection = database
@@ -399,8 +430,13 @@ pub fn vault_delete(database: State<'_, DatabaseState>, id: String) -> Result<bo
     Ok(true)
 }
 
+/// Reveal a vault item
 #[tauri::command]
-pub fn vault_reveal(database: State<'_, DatabaseState>, id: String) -> Result<String, String> {
+pub fn vault_reveal(
+    app: tauri::AppHandle,
+    database: State<'_, DatabaseState>,
+    id: String,
+) -> Result<String, String> {
     let connection = database
         .connection
         .lock()
@@ -414,10 +450,21 @@ pub fn vault_reveal(database: State<'_, DatabaseState>, id: String) -> Result<St
         .optional()
         .map_err(|error| format!("Ошибка чтения vault-записи: {}", error))?
         .ok_or("Запись не найдена".to_string())?;
+    let decrypted_password = decrypt_vault_secret(&app, &password)?;
+    if !is_vault_secret_encrypted(&password) {
+        let encrypted = encrypt_vault_secret(&app, &decrypted_password)?;
+        connection
+            .execute(
+                "UPDATE vault_items SET password = ?2 WHERE id = ?1",
+                params![&id, encrypted],
+            )
+            .map_err(|error| format!("Ошибка миграции legacy vault-пароля: {}", error))?;
+    }
     append_vault_event(&connection, &id, "revealed")?;
-    Ok(password)
+    Ok(decrypted_password)
 }
 
+/// Log a copy event
 #[tauri::command]
 pub fn vault_log_copy(
     database: State<'_, DatabaseState>,
@@ -449,6 +496,7 @@ pub fn vault_log_copy(
     Ok(true)
 }
 
+/// Generate a password
 #[tauri::command]
 pub fn vault_generate_password(
     length: Option<usize>,

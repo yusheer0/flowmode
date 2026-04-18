@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tauri_plugin_updater::UpdaterExt;
 
+/// Update check result
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateCheckResult {
@@ -13,6 +14,7 @@ pub struct UpdateCheckResult {
     target_version: Option<String>,
 }
 
+/// Update download progress
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct UpdateDownloadProgress {
@@ -22,6 +24,7 @@ struct UpdateDownloadProgress {
     version: String,
 }
 
+/// Format the error chain
 fn format_error_chain(error: &dyn Error) -> String {
     let mut details = error.to_string();
     let mut source = error.source();
@@ -35,6 +38,7 @@ fn format_error_chain(error: &dyn Error) -> String {
     details
 }
 
+/// Check for updates
 #[tauri::command]
 pub async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateCheckResult, String> {
     let current_version = app.package_info().version.to_string();
@@ -59,6 +63,7 @@ pub async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateCheckResul
     }
 }
 
+/// Download and install update
 #[tauri::command]
 pub async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String> {
     const PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(150);
@@ -86,9 +91,10 @@ pub async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), St
                                 }
                             });
                             let now = Instant::now();
-                            let current_percent = progress
-                                .map(|value| value.clamp(0.0, 100.0).floor() as u8);
-                            let reached_new_percent = match (current_percent, last_emitted_percent) {
+                            let current_percent =
+                                progress.map(|value| value.clamp(0.0, 100.0).floor() as u8);
+                            let reached_new_percent = match (current_percent, last_emitted_percent)
+                            {
                                 (Some(next), Some(prev)) => next >= prev.saturating_add(1),
                                 (Some(_), None) => true,
                                 _ => false,
@@ -121,10 +127,7 @@ pub async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), St
                     )
                     .await
                     .map_err(|e| {
-                        format!(
-                            "Ошибка установки обновления: {}",
-                            format_error_chain(&e)
-                        )
+                        format!("Ошибка установки обновления: {}", format_error_chain(&e))
                     })?;
                 app.restart()
             }

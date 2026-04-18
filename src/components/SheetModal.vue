@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <transition :name="transitionName">
+  <transition :name="transitionName" :duration="500">
     <div v-if="isOpen" :class="overlayClass" @click.self="handleOverlayClick">
       <div :class="sheetClass">
         <button

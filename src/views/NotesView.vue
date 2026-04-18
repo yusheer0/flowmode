@@ -10,13 +10,11 @@ import { useNotesStore, useSettingsStore } from '@/stores'
 import type { Note } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
 import { useAppUpdater } from '@/composables/useAppUpdater'
-import VaultView from '@/views/VaultView.vue'
 import { TRANSLATIONS } from '@/translations/translations'
 import { getNoteBackground, NOTE_COLORS } from '@/utils/noteVisuals'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
-const activeView = ref<'notes' | 'vault'>('notes')
 const searchQuery = ref('')
 const debouncedSearchQuery = ref('')
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -280,10 +278,6 @@ function confirmDeleteNote(): void {
   closeDeleteNoteConfirm()
 }
 
-function switchView(view: 'notes' | 'vault'): void {
-  activeView.value = view
-}
-
 function updateSearchQuery(value: string): void {
   searchQuery.value = value
 }
@@ -332,7 +326,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section :class="$style.notesView">
-    <div v-if="activeView === 'notes'" :class="$style.canvas">
+    <div :class="$style.canvas">
       <NoteCard
         v-for="note in filteredNotes"
         :key="note.id"
@@ -346,16 +340,9 @@ onBeforeUnmount(() => {
         @delete="deleteNote"
       />
     </div>
-    <VaultView
-      v-else
-      embedded
-      :class="$style.embeddedVault"
-      @close="switchView('notes')"
-    />
 
     <!-- Create Modal -->
-    <template v-if="activeView === 'notes'">
-      <NoteFormSheet
+    <NoteFormSheet
         :is-open="isCreateModalOpen"
         :is-edit="false"
         :body="newNoteBody"
@@ -646,7 +633,7 @@ onBeforeUnmount(() => {
       </SheetModal>
 
       <!-- Layer Delete Confirm Modal -->
-      <ConfirmSheet
+    <ConfirmSheet
         :is-open="isLayerDeleteConfirmModalOpen"
         :title="t('layerDeleteConfirmTitle')"
         :message="t('layerDeleteConfirmMessage')"
@@ -657,28 +644,9 @@ onBeforeUnmount(() => {
         @cancel="closeDeleteLayerConfirm"
         @confirm="confirmDeleteLayer"
       />
-    </template>
-
-    <!-- View Dock -->
-    <nav :class="$style.viewDock">
-      <button
-        :class="[$style.viewButton, { [$style.viewButtonActive]: activeView === 'notes' }]"
-        type="button"
-        @click="switchView('notes')"
-      >
-        {{ t('notesViewTitle') }}
-      </button>
-      <button
-        :class="[$style.viewButton, { [$style.viewButtonActive]: activeView === 'vault' }]"
-        type="button"
-        @click="switchView('vault')"
-      >
-        {{ t('vaultViewTitle') }}
-      </button>
-    </nav>
 
     <!-- Bottom Dock -->
-    <nav v-if="activeView === 'notes'" :class="$style.bottomDock">
+    <nav :class="$style.bottomDock">
       <button
         :class="$style.dockButton"
         type="button"
@@ -722,7 +690,7 @@ onBeforeUnmount(() => {
       </button>
     </nav>
 
-    <div v-if="activeView === 'notes'" :class="$style.layerStatusDock">
+    <div :class="$style.layerStatusDock">
       <div :class="$style.layerStatusWrapper">
         <Layers3 :size="18" color="#ffffff" />
         <strong :class="$style.layerStatusValue">{{ activeLayerLabel }}</strong>

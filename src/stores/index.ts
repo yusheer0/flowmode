@@ -50,7 +50,7 @@ function hasTauriInvokeRuntime(): boolean {
 }
 
 function shouldUseVaultFallback(): boolean {
-  return !hasTauriInvokeRuntime() && import.meta.env.MODE !== 'test'
+  return import.meta.env.DEV && !hasTauriInvokeRuntime() && import.meta.env.MODE !== 'test'
 }
 
 function readDevVaultItems(): VaultDevItem[] {
@@ -87,6 +87,12 @@ function readDevVaultEvents(): VaultEvent[] {
 function writeDevVaultEvents(events: VaultEvent[]): void {
   if (!isClientSide()) return
   localStorage.setItem(DEV_VAULT_EVENTS_KEY, JSON.stringify(events))
+}
+
+function clearDevVaultFallbackStorage(): void {
+  if (!isClientSide()) return
+  localStorage.removeItem(DEV_VAULT_ITEMS_KEY)
+  localStorage.removeItem(DEV_VAULT_EVENTS_KEY)
 }
 
 function maskPassword(password: string): string {
@@ -785,6 +791,9 @@ export const useVaultStore = defineStore('vault', () => {
   }
 
   async function init(): Promise<void> {
+    if (hasTauriInvokeRuntime()) {
+      clearDevVaultFallbackStorage()
+    }
     await Promise.all([refreshItems(), refreshEvents()])
   }
 

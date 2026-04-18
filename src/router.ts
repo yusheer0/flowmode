@@ -10,18 +10,22 @@ const router = createRouter({
       children: [
         {
           path: '',
-          component: () => import('@/views/NotesView.vue'),
-          name: 'home',
+          redirect: '/notes',
         },
         {
           path: 'notes',
           component: () => import('@/views/NotesView.vue'),
           name: 'notes',
         },
+        {
+          path: 'vault',
+          component: () => import('@/views/VaultView.vue'),
+          name: 'vault',
+        },
       ],
     },
-    { path: '/home', redirect: '/' },
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/home', redirect: '/notes' },
+    { path: '/:pathMatch(.*)*', redirect: '/notes' },
   ],
 })
 
