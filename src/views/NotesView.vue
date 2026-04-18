@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Layers3, Search, Cog, SquarePlus, X, Grid2x2 } from 'lucide-vue-next'
 import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
 import SearchSheet from '@/components/common/SearchSheet.vue'
@@ -18,6 +18,8 @@ const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 const activeView = ref<'notes' | 'vault'>('notes')
 const searchQuery = ref('')
+const debouncedSearchQuery = ref('')
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const {
   isSearchModalOpen,
   isSettingsModalOpen,
@@ -48,10 +50,17 @@ const layerFormError = ref('')
 const githubUrl = 'https://github.com/yusheer0/flowmode'
 
 const sortedNotes = computed(() => notesStore.sortNotes(notesStore.getActiveNotesByLayer(), 'important'))
+const searchableNotes = computed(() => sortedNotes.value.map(note => ({
+  note,
+  normalizedContent: note.content.toLowerCase(),
+  normalizedTitle: note.title.toLowerCase(),
+})))
 const filteredNotes = computed(() => {
-  if (!searchQuery.value) return sortedNotes.value
-  const query = searchQuery.value.toLowerCase()
-  return sortedNotes.value.filter((note) => note.content.toLowerCase().includes(query))
+  const query = debouncedSearchQuery.value
+  if (!query) return searchableNotes.value.map(entry => entry.note)
+  return searchableNotes.value
+    .filter(({ normalizedContent, normalizedTitle }) => normalizedContent.includes(query) || normalizedTitle.includes(query))
+    .map(entry => entry.note)
 })
 const isCreateEnabled = computed(() => newNoteBody.value.length > 0)
 const isEditEnabled = computed(() => editNoteBody.value.length > 0)
@@ -276,7 +285,7 @@ function switchView(view: 'notes' | 'vault'): void {
 }
 
 function updateSearchQuery(value: string): void {
-  searchQuery.value = value.trim()
+  searchQuery.value = value
 }
 
 function updateCreateBody(value: string): void {
@@ -301,6 +310,22 @@ onMounted(async () => {
   if (hasNoLayers.value) {
     openLayerModal()
     return
+  }
+})
+
+watch(searchQuery, (nextValue) => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    debouncedSearchQuery.value = nextValue.trim().toLowerCase()
+  }, 180)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
   }
 })
 </script>

@@ -1,9 +1,10 @@
 <template>
   <section :class="$style.vaultView">
-    <div :class="$style.canvas">
+    <div ref="scrollHost" :class="$style.canvas" @scroll="onListScroll">
+      <div :class="$style.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
       <div :class="$style.listPane">
         <VaultItemCard
-          v-for="item in filteredItems"
+          v-for="item in visibleItems"
           :key="item.id"
           :item="item"
           :styles="$style"
@@ -17,6 +18,7 @@
           {{ t('emptyState') }}
         </p>
       </div>
+      <div :class="$style.virtualSpacer" :style="{ height: `${bottomSpacerHeight}px` }"></div>
     </div>
 
     <VaultEntrySheet
@@ -124,6 +126,13 @@ const searchQuery = ref('')
 const isSearchModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
 const pendingDeleteItemId = ref<string | null>(null)
+const scrollHost = ref<HTMLElement | null>(null)
+const scrollTop = ref(0)
+const viewportHeight = ref(0)
+
+const ESTIMATED_CARD_HEIGHT = 186
+const CARD_GAP = 12
+const OVERSCAN_ROWS = 3
 
 const {
   form,
@@ -144,6 +153,20 @@ const {
 
 const { isLoginCopied, isPasswordCopied, activate, resetState, clearTimers } = useCopyFeedback()
 const { filteredItems } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
+const columnCount = computed(() => 3)
+const rowStride = computed(() => ESTIMATED_CARD_HEIGHT + CARD_GAP)
+const totalRows = computed(() => Math.ceil(filteredItems.value.length / columnCount.value))
+const startRow = computed(() => Math.max(0, Math.floor(scrollTop.value / rowStride.value) - OVERSCAN_ROWS))
+const visibleRowCount = computed(() => {
+  const base = Math.ceil(viewportHeight.value / rowStride.value)
+  return Math.max(1, base + OVERSCAN_ROWS * 2)
+})
+const endRow = computed(() => Math.min(totalRows.value, startRow.value + visibleRowCount.value))
+const startIndex = computed(() => startRow.value * columnCount.value)
+const endIndex = computed(() => Math.min(filteredItems.value.length, endRow.value * columnCount.value))
+const visibleItems = computed(() => filteredItems.value.slice(startIndex.value, endIndex.value))
+const topSpacerHeight = computed(() => startRow.value * rowStride.value)
+const bottomSpacerHeight = computed(() => Math.max(0, (totalRows.value - endRow.value) * rowStride.value))
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
@@ -183,6 +206,16 @@ function closeSearchModal(): void {
 
 function updateSearchQuery(value: string): void {
   searchQuery.value = value.trim()
+}
+
+function syncViewportMetrics(): void {
+  if (!scrollHost.value) return
+  viewportHeight.value = scrollHost.value.clientHeight
+}
+
+function onListScroll(event: Event): void {
+  const target = event.target as HTMLElement
+  scrollTop.value = target.scrollTop
 }
 
 function toggleSearchModal(): void {
@@ -242,11 +275,14 @@ async function confirmDelete(): Promise<void> {
 
 onMounted(async () => {
   await vaultStore.refreshItems()
+  syncViewportMetrics()
+  window.addEventListener('resize', syncViewportMetrics)
 })
 
 onBeforeUnmount(() => {
   cleanup()
   clearTimers()
+  window.removeEventListener('resize', syncViewportMetrics)
 })
 </script>
 

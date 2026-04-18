@@ -51,23 +51,12 @@ export interface MoodEntry {
   createdAt: string
 }
 
-export interface TelegramSettings {
-  botToken: string
-  chatId: string
-  enabled: boolean
-  notifyTime: string
-  createFromTelegram: boolean  // Создавать записи из сообщений боту
-  saveVoice: boolean           // Сохранять голосовые сообщения
-  lastUpdateId?: number        // ID последнего обработанного сообщения
-}
-
 export interface AppSettings {
   theme: 'light' | 'dark'
   language: 'ru' | 'en'
   notificationsEnabled: boolean
   backupEnabled: boolean
   minimizeOnClose: boolean
-  telegram: TelegramSettings
 }
 
 export interface ExportData {
@@ -113,11 +102,6 @@ export interface NotesLayer {
   createdAt: string
 }
 
-export interface WeatherSettings {
-  city: string
-  unit: 'celsius' | 'fahrenheit'
-}
-
 export type VaultEventType = 'created' | 'updated' | 'deleted' | 'revealed' | 'copied_login' | 'copied_password'
 
 export interface VaultEvent {
@@ -125,6 +109,12 @@ export interface VaultEvent {
   itemId: string
   type: VaultEventType
   createdAt: string
+}
+
+export interface VaultEventsQuery {
+  itemId?: string
+  limit?: number
+  offset?: number
 }
 
 export interface VaultItem {

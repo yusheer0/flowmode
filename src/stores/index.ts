@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type {
   AppSettings,
-  TelegramSettings,
   Note,
   MasterPasswordSettings,
   NoteSortOption,
@@ -10,9 +9,9 @@ import type {
   VaultItem,
   VaultItemInput,
   VaultEvent,
+  VaultEventsQuery,
 } from '@/types'
 import CryptoJS from 'crypto-js'
-import bcrypt from 'bcryptjs'
 import { invoke } from '@tauri-apps/api/core'
 
 const STORAGE_KEYS = {
@@ -24,9 +23,19 @@ const USER_DATA_OWNERSHIP_KEY = 'flowmodeUserDataOwned'
 
 type StorageMap = Record<string, string>
 type VaultDevItem = VaultItem & { password: string }
+type StorageOperation = { type: 'set'; value: string } | { type: 'remove' }
+type StoredNoteRecord = { id: string; payload: string; updatedAt?: number }
 
 const DEV_VAULT_ITEMS_KEY = 'vaultItemsDev'
 const DEV_VAULT_EVENTS_KEY = 'vaultEventsDev'
+const NOTES_LEGACY_KEY = STORAGE_KEYS.notes
+const STORAGE_FLUSH_DELAY_MS = 70
+const NOTES_BATCH_LIMIT = 400
+const DEFAULT_EVENTS_LIMIT = 200
+
+const storageWriteQueue = new Map<string, StorageOperation>()
+let storageFlushTimer: ReturnType<typeof setTimeout> | null = null
+let storageFlushInFlight = false
 
 function isClientSide(): boolean {
   return typeof window !== 'undefined'
@@ -141,19 +150,83 @@ async function dbGetMany(keys: string[]): Promise<StorageMap> {
 }
 
 function dbSet(key: string, value: string): void {
-  void invoke<boolean>('storage_set', { key, value }).catch((error) => {
-    console.error(`Ошибка записи ключа ${key} в SQLite:`, error)
-  })
+  storageWriteQueue.set(key, { type: 'set', value })
+  scheduleStorageFlush()
 }
 
 function dbRemove(key: string): void {
-  void invoke<boolean>('storage_remove', { key }).catch((error) => {
-    console.error(`Ошибка удаления ключа ${key} из SQLite:`, error)
-  })
+  storageWriteQueue.set(key, { type: 'remove' })
+  scheduleStorageFlush()
 }
 
 function dbSetJson<T>(key: string, value: T): void {
   dbSet(key, JSON.stringify(value))
+}
+
+function scheduleStorageFlush(): void {
+  if (storageFlushTimer) return
+  storageFlushTimer = setTimeout(() => {
+    storageFlushTimer = null
+    void flushStorageQueue()
+  }, STORAGE_FLUSH_DELAY_MS)
+}
+
+async function flushStorageQueue(): Promise<void> {
+  if (storageFlushInFlight || storageWriteQueue.size === 0) return
+  storageFlushInFlight = true
+  const queueSnapshot = new Map(storageWriteQueue)
+  storageWriteQueue.clear()
+
+  try {
+    for (const [key, operation] of queueSnapshot.entries()) {
+      if (operation.type === 'set') {
+        await invoke<boolean>('storage_set', { key, value: operation.value })
+      } else {
+        await invoke<boolean>('storage_remove', { key })
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка пакетной записи в SQLite:', error)
+  } finally {
+    storageFlushInFlight = false
+    if (storageWriteQueue.size > 0) {
+      scheduleStorageFlush()
+    }
+  }
+}
+
+async function notesList(): Promise<StoredNoteRecord[]> {
+  try {
+    const items = await invoke<StoredNoteRecord[]>('notes_list')
+    return Array.isArray(items) ? items : []
+  } catch (error) {
+    console.error('Ошибка чтения notes_items из SQLite:', error)
+    return []
+  }
+}
+
+async function notesUpsert(note: Note): Promise<void> {
+  try {
+    await invoke<boolean>('notes_upsert', { id: note.id, payload: JSON.stringify(note) })
+  } catch (error) {
+    console.error(`Ошибка записи заметки ${note.id} в SQLite:`, error)
+  }
+}
+
+async function notesRemove(id: string): Promise<void> {
+  try {
+    await invoke<boolean>('notes_remove', { id })
+  } catch (error) {
+    console.error(`Ошибка удаления заметки ${id} из SQLite:`, error)
+  }
+}
+
+async function hashPassword(password: string, rounds: number): Promise<string> {
+  return invoke<string>('hash_master_password', { password, rounds })
+}
+
+async function comparePassword(password: string, storedHash: string): Promise<boolean> {
+  return invoke<boolean>('verify_master_password', { password, storedHash })
 }
 
 function markUserDataOwned(): void {
@@ -168,15 +241,6 @@ export const useSettingsStore = defineStore('settings', () => {
     notificationsEnabled: false,
     backupEnabled: false,
     minimizeOnClose: false,
-    telegram: {
-      botToken: '',
-      chatId: '',
-      enabled: false,
-      notifyTime: '08:00',
-      createFromTelegram: false,
-      saveVoice: false,
-      lastUpdateId: 0,
-    },
   }
   const settings = ref<AppSettings>({
     ...defaultSettings,
@@ -200,10 +264,6 @@ export const useSettingsStore = defineStore('settings', () => {
         language: parsedLanguage === 'ko'
           ? 'en'
           : (parsed.language || defaultSettings.language),
-        telegram: {
-          ...defaultSettings.telegram,
-          ...parsed.telegram,
-        },
       }
       document.documentElement.setAttribute('data-theme', settings.value.theme)
     } catch (e) {
@@ -219,9 +279,6 @@ export const useSettingsStore = defineStore('settings', () => {
     settings.value = {
       ...settings.value,
       ...updates,
-      telegram: updates.telegram
-        ? { ...settings.value.telegram, ...updates.telegram }
-        : settings.value.telegram,
     }
 
     if (updates.theme) {
@@ -230,17 +287,10 @@ export const useSettingsStore = defineStore('settings', () => {
 
     saveSettings()
   }
-
-  function updateTelegramSettings(updates: Partial<TelegramSettings>): void {
-    settings.value.telegram = { ...settings.value.telegram, ...updates }
-    saveSettings()
-  }
-
   return {
     settings,
     init,
     updateSettings,
-    updateTelegramSettings,
   }
 })
 
@@ -254,6 +304,7 @@ export const useNotesStore = defineStore('notes', () => {
   const layers = ref<NotesLayer[]>([])
   const activeLayerId = ref<string>('')
   const initialized = ref(false)
+  const persistedNoteIds = ref<Set<string>>(new Set())
 
   type NoteInput = {
     title?: string
@@ -337,47 +388,102 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  async function upsertNotesBatch(nextNotes: Note[]): Promise<void> {
+    if (nextNotes.length === 0) return
+    for (let index = 0; index < nextNotes.length; index += NOTES_BATCH_LIMIT) {
+      const batch = nextNotes.slice(index, index + NOTES_BATCH_LIMIT)
+      await Promise.all(batch.map(note => notesUpsert(note)))
+    }
+  }
+
+  function saveToStorage(): void {
+    const nextNotes = [...notes.value]
+    const nextNoteIds = new Set(nextNotes.map(note => note.id))
+    const removedIds = Array.from(persistedNoteIds.value).filter(id => !nextNoteIds.has(id))
+    persistedNoteIds.value = nextNoteIds
+
+    void (async () => {
+      await upsertNotesBatch(nextNotes)
+      await Promise.all(removedIds.map(id => notesRemove(id)))
+    })()
+  }
+
+  function persistSingleNote(note: Note): void {
+    persistedNoteIds.value.add(note.id)
+    void notesUpsert(note)
+  }
+
+  function removeNoteFromStorage(noteId: string): void {
+    persistedNoteIds.value.delete(noteId)
+    void notesRemove(noteId)
+  }
+
+  async function migrateLegacyNotesIfNeeded(storedLegacyNotes?: string): Promise<Note[]> {
+    if (!storedLegacyNotes) return []
+    try {
+      const parsed = JSON.parse(storedLegacyNotes) as Partial<Note>[]
+      const normalized = parsed.map(note => normalizeNote(note))
+      await upsertNotesBatch(normalized)
+      dbRemove(NOTES_LEGACY_KEY)
+      return normalized
+    } catch (error) {
+      console.error('Ошибка миграции legacy-заметок:', error)
+      return []
+    }
+  }
+
   // Инициализация - загрузка из SQLite
   async function init(): Promise<void> {
     if (initialized.value) return
-    const payload = await dbGetMany([LAYERS_STORAGE_KEY, ACTIVE_LAYER_STORAGE_KEY, STORAGE_KEYS.notes])
+    const payload = await dbGetMany([LAYERS_STORAGE_KEY, ACTIVE_LAYER_STORAGE_KEY, NOTES_LEGACY_KEY])
     const storedLayers = payload[LAYERS_STORAGE_KEY]
     const storedLayerId = payload[ACTIVE_LAYER_STORAGE_KEY]
-    const storedNotes = payload[STORAGE_KEYS.notes]
+    const storedLegacyNotes = payload[NOTES_LEGACY_KEY]
+    let shouldPersistLayers = false
+    let shouldPersistActiveLayer = false
 
     if (storedLayers) {
       try {
         layers.value = ensureLayers(JSON.parse(storedLayers))
+        shouldPersistLayers = JSON.stringify(layers.value) !== storedLayers
       } catch (e) {
         console.error('Ошибка загрузки слоев заметок:', e)
         layers.value = []
+        shouldPersistLayers = true
       }
     } else {
       layers.value = []
+      shouldPersistLayers = true
     }
 
     activeLayerId.value = isExistingLayer(storedLayerId) ? storedLayerId : (layers.value[0]?.id || '')
+    shouldPersistActiveLayer = (storedLayerId || '') !== activeLayerId.value
 
-    if (storedNotes) {
-      try {
-        const parsed = JSON.parse(storedNotes) as Partial<Note>[]
-        notes.value = parsed.map((note) => normalizeNote(note))
-        saveLayers()
-        saveActiveLayer()
-        saveToStorage()
-      } catch (e) {
-        console.error('Ошибка загрузки заметок:', e)
-      }
+    const granularNotes = await notesList()
+    if (granularNotes.length > 0) {
+      notes.value = granularNotes
+        .map((entry) => {
+          try {
+            const parsed = JSON.parse(entry.payload) as Partial<Note>
+            return normalizeNote(parsed)
+          } catch (error) {
+            console.error(`Ошибка загрузки заметки ${entry.id}:`, error)
+            return null
+          }
+        })
+        .filter((note): note is Note => note !== null)
     } else {
+      notes.value = await migrateLegacyNotesIfNeeded(storedLegacyNotes)
+    }
+    persistedNoteIds.value = new Set(notes.value.map(note => note.id))
+
+    if (shouldPersistLayers) {
       saveLayers()
+    }
+    if (shouldPersistActiveLayer) {
       saveActiveLayer()
     }
     initialized.value = true
-  }
-
-  // Сохранение в SQLite
-  function saveToStorage(): void {
-    dbSetJson(STORAGE_KEYS.notes, notes.value)
   }
 
   function saveLayers(): void {
@@ -486,7 +592,7 @@ export const useNotesStore = defineStore('notes', () => {
     }
     notes.value.unshift(newNote)
     markUserDataOwned()
-    saveToStorage()
+    persistSingleNote(newNote)
   }
 
   function updateNote(
@@ -501,7 +607,7 @@ export const useNotesStore = defineStore('notes', () => {
         title: updates.title?.trim() || notes.value[index].title,
         updatedAt: new Date().toISOString(),
       }
-      saveToStorage()
+      persistSingleNote(notes.value[index])
     }
   }
 
@@ -530,13 +636,13 @@ export const useNotesStore = defineStore('notes', () => {
       note.deletedAt = new Date().toISOString()
       notes.value.splice(index, 1)
       notes.value.push(note)
-      saveToStorage()
+      persistSingleNote(note)
     }
   }
 
   function permanentDeleteNote(id: string): void {
     notes.value = notes.value.filter(n => n.id !== id)
-    saveToStorage()
+    removeNoteFromStorage(id)
   }
 
   function restoreNote(id: string): void {
@@ -548,7 +654,7 @@ export const useNotesStore = defineStore('notes', () => {
       // Перемещаем в начало
       notes.value.splice(index, 1)
       notes.value.unshift(note)
-      saveToStorage()
+      persistSingleNote(note)
     }
   }
 
@@ -557,7 +663,7 @@ export const useNotesStore = defineStore('notes', () => {
     if (index !== -1) {
       notes.value[index].isImportant = !notes.value[index].isImportant
       notes.value[index].updatedAt = new Date().toISOString()
-      saveToStorage()
+      persistSingleNote(notes.value[index])
     }
   }
 
@@ -578,8 +684,9 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   function clearTrash(): void {
+    const trashedIds = notes.value.filter(note => note.deletedAt).map(note => note.id)
     notes.value = notes.value.filter(n => !n.deletedAt)
-    saveToStorage()
+    trashedIds.forEach(id => removeNoteFromStorage(id))
   }
 
   function sortNotes(notesToSort: Note[], option: NoteSortOption): Note[] {
@@ -698,17 +805,21 @@ export const useVaultStore = defineStore('vault', () => {
     }
   }
 
-  async function refreshEvents(itemId?: string): Promise<void> {
+  async function refreshEvents(query: VaultEventsQuery = {}): Promise<void> {
     clearError()
+    const itemId = query.itemId
+    const limit = query.limit ?? DEFAULT_EVENTS_LIMIT
+    const offset = query.offset ?? 0
     try {
       if (shouldUseVaultFallback()) {
         const source = readDevVaultEvents()
-        events.value = itemId
+        const filtered = itemId
           ? source.filter(entry => entry.itemId === itemId)
           : source
+        events.value = filtered.slice(offset, offset + limit)
         return
       }
-      events.value = await invoke<VaultEvent[]>('vault_list_events', { itemId })
+      events.value = await invoke<VaultEvent[]>('vault_list_events', { itemId, limit, offset })
     } catch (e) {
       error.value = `Ошибка загрузки истории vault: ${e}`
     }
@@ -746,7 +857,7 @@ export const useVaultStore = defineStore('vault', () => {
       }
       const created = await invoke<VaultItem>('vault_create', { input: normalized })
       items.value = [created, ...items.value.filter(item => item.id !== created.id)]
-      await refreshEvents()
+      await refreshEvents({ itemId: created.id, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
       return true
     } catch (e) {
       error.value = `Ошибка создания записи: ${e}`
@@ -793,7 +904,7 @@ export const useVaultStore = defineStore('vault', () => {
       const updated = await invoke<VaultItem>('vault_update', { id, input: normalized })
       items.value = items.value.map(item => (item.id === id ? updated : item))
       delete revealCache.value[id]
-      await refreshEvents()
+      await refreshEvents({ itemId: id, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
       return true
     } catch (e) {
       error.value = `Ошибка обновления записи: ${e}`
@@ -820,7 +931,7 @@ export const useVaultStore = defineStore('vault', () => {
       if (!deleted) return false
       items.value = items.value.filter(item => item.id !== id)
       delete revealCache.value[id]
-      await refreshEvents()
+      await refreshEvents({ itemId: id, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
       return true
     } catch (e) {
       error.value = `Ошибка удаления записи: ${e}`
@@ -828,7 +939,7 @@ export const useVaultStore = defineStore('vault', () => {
     }
   }
 
-  async function revealPassword(itemId: string): Promise<string | null> {
+  async function revealPassword(itemId: string, refreshHistory = true): Promise<string | null> {
     clearError()
     try {
       if (shouldUseVaultFallback()) {
@@ -847,7 +958,9 @@ export const useVaultStore = defineStore('vault', () => {
         value: password,
         expiresAt: Date.now() + REVEAL_TTL_MS,
       }
-      await refreshEvents()
+      if (refreshHistory) {
+        await refreshEvents({ itemId, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
+      }
       return password
     } catch (e) {
       error.value = `Ошибка показа пароля: ${e}`
@@ -878,7 +991,7 @@ export const useVaultStore = defineStore('vault', () => {
         return true
       }
       await invoke<boolean>('vault_log_copy', { itemId, field: 'username' })
-      await refreshEvents()
+      await refreshEvents({ itemId, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
       return true
     } catch (e) {
       error.value = `Ошибка копирования логина: ${e}`
@@ -887,7 +1000,7 @@ export const useVaultStore = defineStore('vault', () => {
   }
 
   async function copyPassword(itemId: string): Promise<boolean> {
-    const password = await revealPassword(itemId)
+    const password = await revealPassword(itemId, false)
     if (!password) return false
     try {
       await navigator.clipboard.writeText(password)
@@ -896,7 +1009,7 @@ export const useVaultStore = defineStore('vault', () => {
         return true
       }
       await invoke<boolean>('vault_log_copy', { itemId, field: 'password' })
-      await refreshEvents()
+      await refreshEvents({ itemId, limit: DEFAULT_EVENTS_LIMIT, offset: 0 })
       return true
     } catch (e) {
       error.value = `Ошибка копирования пароля: ${e}`
@@ -978,7 +1091,7 @@ export const useMasterPasswordStore = defineStore('masterPassword', () => {
   // Установка мастер-пароля
   async function setMasterPassword(password: string, hint?: string): Promise<boolean> {
     try {
-      const hash = await bcrypt.hash(password, 10)
+      const hash = await hashPassword(password, 10)
       masterPasswordSettings.value = {
         isSet: true,
         hash,
@@ -999,7 +1112,7 @@ export const useMasterPasswordStore = defineStore('masterPassword', () => {
     if (!masterPasswordSettings.value.hash) return false
 
     try {
-      const isValid = await bcrypt.compare(password, masterPasswordSettings.value.hash)
+      const isValid = await comparePassword(password, masterPasswordSettings.value.hash)
       if (isValid) {
         isUnlocked.value = true
         encryptionKey.value = password
@@ -1029,7 +1142,7 @@ export const useMasterPasswordStore = defineStore('masterPassword', () => {
     if (!isValid) return false
 
     try {
-      const hash = await bcrypt.hash(newPassword, 10)
+      const hash = await hashPassword(newPassword, 10)
       masterPasswordSettings.value.hash = hash
       masterPasswordSettings.value.hint = ''
       saveSettings()
