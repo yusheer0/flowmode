@@ -52,7 +52,21 @@ const emit = defineEmits<{
 function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 'url'): void {
   const target = event.target as HTMLInputElement
   const value = field === 'password' ? target.value : target.value.trim()
-  emit(`update:${field}`, value)
+
+  switch (field) {
+    case 'title':
+      emit('update:title', value)
+      break
+    case 'username':
+      emit('update:username', value)
+      break
+    case 'password':
+      emit('update:password', value)
+      break
+    case 'url':
+      emit('update:url', value)
+      break
+  }
 }
 </script>
 
