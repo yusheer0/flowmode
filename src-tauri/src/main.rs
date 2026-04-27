@@ -3,9 +3,9 @@
 use std::io;
 
 use tauri::{
+    Manager, UserAttentionType,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, UserAttentionType,
 };
 use tauri_plugin_notification::NotificationExt;
 

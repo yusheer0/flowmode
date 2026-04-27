@@ -2,14 +2,14 @@ use std::fs;
 use std::path::PathBuf;
 
 use aes_gcm::{
-    aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
+    aead::{Aead, KeyInit},
 };
-use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
-use bcrypt::{hash, verify, DEFAULT_COST};
+use base64::engine::general_purpose::STANDARD as BASE64;
+use bcrypt::{DEFAULT_COST, hash, verify};
 use rand::RngCore;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use tauri::Manager;
 
 const VAULT_KEY_FILE_NAME: &str = "vault.key";

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Mutex;
 
-use rusqlite::{params, params_from_iter, Connection};
+use rusqlite::{Connection, params, params_from_iter};
 use serde::Serialize;
 use tauri::Manager;
 
