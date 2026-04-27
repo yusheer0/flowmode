@@ -21,9 +21,13 @@ const isSearchModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
 const pendingDeleteItemId = ref<string | null>(null)
 const scrollHost = ref<HTMLElement | null>(null)
+const listPane = ref<HTMLElement | null>(null)
 const scrollTop = ref(0)
 const viewportHeight = ref(0)
+const columnCount = ref(1)
+let resizeObserver: ResizeObserver | null = null
 
+const MIN_CARD_WIDTH = 260
 const ESTIMATED_CARD_HEIGHT = 186
 const CARD_GAP = 12
 const OVERSCAN_ROWS = 3
@@ -47,10 +51,13 @@ const {
 
 const { isLoginCopied, isPasswordCopied, activate, resetState, clearTimers } = useCopyFeedback()
 const { filteredItems } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
-const columnCount = computed(() => 3)
 const rowStride = computed(() => ESTIMATED_CARD_HEIGHT + CARD_GAP)
 const totalRows = computed(() => Math.ceil(filteredItems.value.length / columnCount.value))
-const startRow = computed(() => Math.max(0, Math.floor(scrollTop.value / rowStride.value) - OVERSCAN_ROWS))
+const startRow = computed(() => {
+  const firstVisibleRow = Math.max(0, Math.floor(scrollTop.value / rowStride.value) - OVERSCAN_ROWS)
+  const maxStartRow = Math.max(0, totalRows.value - 1)
+  return Math.min(firstVisibleRow, maxStartRow)
+})
 const visibleRowCount = computed(() => {
   const base = Math.ceil(viewportHeight.value / rowStride.value)
   return Math.max(1, base + OVERSCAN_ROWS * 2)
@@ -105,6 +112,25 @@ function updateSearchQuery(value: string): void {
 function syncViewportMetrics(): void {
   if (!scrollHost.value) return
   viewportHeight.value = scrollHost.value.clientHeight
+}
+
+function syncColumnCount(): void {
+  if (!listPane.value) return
+  const containerWidth = listPane.value.clientWidth
+  if (containerWidth <= 0) {
+    columnCount.value = 1
+    return
+  }
+  const nextColumnCount = Math.max(
+    1,
+    Math.floor((containerWidth + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)),
+  )
+  columnCount.value = nextColumnCount
+}
+
+function syncViewportState(): void {
+  syncViewportMetrics()
+  syncColumnCount()
 }
 
 function onListScroll(event: Event): void {
@@ -169,14 +195,25 @@ async function confirmDelete(): Promise<void> {
 
 onMounted(async () => {
   await vaultStore.refreshItems()
-  syncViewportMetrics()
-  window.addEventListener('resize', syncViewportMetrics)
+  syncViewportState()
+
+  resizeObserver = new ResizeObserver(() => {
+    syncViewportState()
+  })
+
+  if (scrollHost.value) {
+    resizeObserver.observe(scrollHost.value)
+  }
+  if (listPane.value) {
+    resizeObserver.observe(listPane.value)
+  }
 })
 
 onBeforeUnmount(() => {
   cleanup()
   clearTimers()
-  window.removeEventListener('resize', syncViewportMetrics)
+  resizeObserver?.disconnect()
+  resizeObserver = null
 })
 </script>
 
@@ -184,7 +221,11 @@ onBeforeUnmount(() => {
   <section :class="$style.vaultView">
     <div ref="scrollHost" :class="$style.canvas" @scroll="onListScroll">
       <div :class="$style.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
-      <div :class="$style.listPane">
+      <div
+        ref="listPane"
+        :class="$style.listPane"
+        :style="{ '--vault-card-min-width': `${MIN_CARD_WIDTH}px` }"
+      >
         <VaultItemCard
           v-for="item in visibleItems"
           :key="item.id"

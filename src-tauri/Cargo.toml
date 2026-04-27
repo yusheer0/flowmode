@@ -1,6 +1,6 @@
 [package]
 name = "daily-diary"
-version = "0.3.0-hf"
+version = "0.3.1"
 description = "Flowmode - локальный ежедневник"
 authors = ["you"]
 edition = "2024"
