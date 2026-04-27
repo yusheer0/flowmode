@@ -1,108 +1,6 @@
-<template>
-  <section :class="$style.vaultView">
-    <div ref="scrollHost" :class="$style.canvas" @scroll="onListScroll">
-      <div :class="$style.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
-      <div :class="$style.listPane">
-        <VaultItemCard
-          v-for="item in visibleItems"
-          :key="item.id"
-          :item="item"
-          :styles="$style"
-          :login-label="t('loginLabel')"
-          :password-label="t('passwordLabel')"
-          :delete-title="t('delete')"
-          @edit="openEditModal"
-          @delete="requestDelete"
-        />
-        <p v-if="!filteredItems.length" :class="$style.emptyState">
-          {{ t('emptyState') }}
-        </p>
-      </div>
-      <div :class="$style.virtualSpacer" :style="{ height: `${bottomSpacerHeight}px` }"></div>
-    </div>
-
-    <VaultEntrySheet
-      :is-open="isFormModalOpen"
-      :is-editing="isEditing"
-      :title-value="form.title"
-      :username-value="form.username"
-      :password-value="form.password"
-      :url-value="form.url"
-      :is-password-visible="isPasswordVisible"
-      :edit-password-mask="editPasswordMask"
-      :is-login-copied="isLoginCopied"
-      :is-password-copied="isPasswordCopied"
-      :can-save="canSaveForm"
-      :styles="$style"
-      :labels="entryLabels"
-      @close="closeFormModal"
-      @save="saveForm"
-      @update:title="(value) => (form.title = value)"
-      @update:username="(value) => (form.username = value)"
-      @update:password="(value) => (form.password = value)"
-      @update:url="(value) => (form.url = value)"
-      @password-input="handlePasswordInput"
-      @toggle-password="togglePasswordVisibility"
-      @copy-login="copyEditingLogin"
-      @copy-password="copyEditingPassword"
-      @open-url="openUrl"
-    />
-
-    <ConfirmSheet
-      :is-open="isDeleteConfirmModalOpen"
-      :title="t('deleteConfirmTitle')"
-      :message="t('deleteConfirmDescription')"
-      :cancel-label="t('cancel')"
-      :confirm-label="t('delete')"
-      :styles="$style"
-      @close="closeDeleteConfirmModal"
-      @cancel="closeDeleteConfirmModal"
-      @confirm="confirmDelete"
-    />
-
-    <SearchSheet
-      :is-open="isSearchModalOpen"
-      :title="t('searchTitle')"
-      :close-title="t('close')"
-      :placeholder="t('searchPlaceholder')"
-      :model-value="searchQuery"
-      :styles="$style"
-      @close="closeSearchModal"
-      @update:model-value="updateSearchQuery"
-    />
-
-    <nav :class="$style.bottomDock">
-      <button
-        :class="$style.dockButton"
-        type="button"
-        :title="t('notesViewTitle')"
-        @click="navigateToNotes"
-      >
-        <ArrowLeft :size="20" />
-      </button>
-      <button
-        :class="$style.dockButton"
-        type="button"
-        :title="t('createEntry')"
-        @click="openCreateModal"
-      >
-        <SquarePlus :size="20" />
-      </button>
-      <button
-        :class="[$style.dockButton, { [$style.dockButtonActive]: isSearchModalOpen }]"
-        type="button"
-        :title="t('searchTitle')"
-        @click="toggleSearchModal"
-      >
-        <Search :size="20" />
-      </button>
-    </nav>
-  </section>
-</template>
-
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ArrowLeft, Search, SquarePlus } from 'lucide-vue-next'
+import { Search, SquarePlus } from 'lucide-vue-next'
 import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
 import SearchSheet from '@/components/common/SearchSheet.vue'
 import VaultEntrySheet from '@/components/vault/VaultEntrySheet.vue'
@@ -195,14 +93,6 @@ const entryLabels = computed(() => ({
 function openCreateModal(): void {
   resetState()
   openCreateEntryModal()
-}
-
-function navigateToNotes(): void {
-  if (props.embedded) {
-    emit('close')
-    return
-  }
-  void router.push('/notes')
 }
 
 function openEditModal(item: VaultItem): void {
@@ -299,5 +189,99 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncViewportMetrics)
 })
 </script>
+
+<template>
+  <section :class="$style.vaultView">
+    <div ref="scrollHost" :class="$style.canvas" @scroll="onListScroll">
+      <div :class="$style.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
+      <div :class="$style.listPane">
+        <VaultItemCard
+          v-for="item in visibleItems"
+          :key="item.id"
+          :item="item"
+          :styles="$style"
+          :login-label="t('loginLabel')"
+          :password-label="t('passwordLabel')"
+          :delete-title="t('delete')"
+          @edit="openEditModal"
+          @delete="requestDelete"
+        />
+        <p v-if="!filteredItems.length" :class="$style.emptyState">
+          {{ t('emptyState') }}
+        </p>
+      </div>
+      <div :class="$style.virtualSpacer" :style="{ height: `${bottomSpacerHeight}px` }"></div>
+    </div>
+
+    <VaultEntrySheet
+      :is-open="isFormModalOpen"
+      :is-editing="isEditing"
+      :title-value="form.title"
+      :username-value="form.username"
+      :password-value="form.password"
+      :url-value="form.url"
+      :is-password-visible="isPasswordVisible"
+      :edit-password-mask="editPasswordMask"
+      :is-login-copied="isLoginCopied"
+      :is-password-copied="isPasswordCopied"
+      :can-save="canSaveForm"
+      :styles="$style"
+      :labels="entryLabels"
+      @close="closeFormModal"
+      @save="saveForm"
+      @update:title="(value) => (form.title = value)"
+      @update:username="(value) => (form.username = value)"
+      @update:password="(value) => (form.password = value)"
+      @update:url="(value) => (form.url = value)"
+      @password-input="handlePasswordInput"
+      @toggle-password="togglePasswordVisibility"
+      @copy-login="copyEditingLogin"
+      @copy-password="copyEditingPassword"
+      @open-url="openUrl"
+    />
+
+    <ConfirmSheet
+      :is-open="isDeleteConfirmModalOpen"
+      :title="t('deleteConfirmTitle')"
+      :message="t('deleteConfirmDescription')"
+      :cancel-label="t('cancel')"
+      :confirm-label="t('delete')"
+      :styles="$style"
+      @close="closeDeleteConfirmModal"
+      @cancel="closeDeleteConfirmModal"
+      @confirm="confirmDelete"
+    />
+
+    <SearchSheet
+      :is-open="isSearchModalOpen"
+      :title="t('searchTitle')"
+      :close-title="t('close')"
+      :placeholder="t('searchPlaceholder')"
+      :model-value="searchQuery"
+      :styles="$style"
+      @close="closeSearchModal"
+      @update:model-value="updateSearchQuery"
+    />
+
+    <nav :class="$style.bottomDock">
+      <button
+        :class="$style.dockButton"
+        type="button"
+        :title="t('createEntry')"
+        @click="openCreateModal"
+      >
+        <SquarePlus :size="20" />
+      </button>
+      <button
+        :class="[$style.dockButton, { [$style.dockButtonActive]: isSearchModalOpen }]"
+        type="button"
+        :title="t('searchTitle')"
+        @click="toggleSearchModal"
+      >
+        <Search :size="20" />
+      </button>
+    </nav>
+  </section>
+</template>
 
 <style lang="scss" module src="./VaultView.module.scss"></style>

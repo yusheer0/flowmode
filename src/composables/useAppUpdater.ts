@@ -3,12 +3,14 @@ import { getVersion } from '@tauri-apps/api/app'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
+/** Type of update check result */
 type UpdateCheckResult = {
   available: boolean
   currentVersion: string
   targetVersion: string | null
 }
 
+/** Type of update download progress */
 type UpdateDownloadProgress = {
   downloaded: number
   contentLength: number | null
@@ -16,6 +18,7 @@ type UpdateDownloadProgress = {
   version: string
 }
 
+/** Type of translate function */
 type TranslateFn = (key: string) => string
 
 export function useAppUpdater(t: TranslateFn) {
@@ -34,6 +37,7 @@ export function useAppUpdater(t: TranslateFn) {
 
   let unlistenUpdateProgress: UnlistenFn | null = null
 
+  /** Formats bytes to a human readable format */
   function formatBytes(bytes: number): string {
     const units = ['B', 'KB', 'MB', 'GB']
     if (bytes <= 0) return `0 ${units[0]}`
@@ -43,6 +47,7 @@ export function useAppUpdater(t: TranslateFn) {
     return `${normalized.toFixed(fractionDigits)} ${units[index]}`
   }
 
+  /** Ensures that the update progress listener is set up */
   async function ensureUpdateProgressListener(): Promise<void> {
     if (unlistenUpdateProgress) return
     unlistenUpdateProgress = await listen<UpdateDownloadProgress>('update_download_progress', (event) => {
@@ -57,6 +62,7 @@ export function useAppUpdater(t: TranslateFn) {
     })
   }
 
+  /** Checks for updates and installs them */
   async function checkAndInstallUpdate(): Promise<void> {
     if (isCheckingUpdates.value || isInstallingUpdate.value) return
     isUpdateModalOpen.value = true
@@ -99,6 +105,7 @@ export function useAppUpdater(t: TranslateFn) {
     }
   }
 
+  /** Loads the app version */
   async function loadAppVersion(): Promise<void> {
     try {
       const version = await getVersion()
@@ -110,11 +117,13 @@ export function useAppUpdater(t: TranslateFn) {
     }
   }
 
+  /** Closes the update modal */
   function closeUpdateModal(): void {
     if (isInstallingUpdate.value) return
     isUpdateModalOpen.value = false
   }
 
+  /** Unmounts the component */
   onBeforeUnmount(() => {
     if (!unlistenUpdateProgress) return
     void unlistenUpdateProgress()

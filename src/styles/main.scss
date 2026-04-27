@@ -13,7 +13,7 @@ html, body, #app {
 }
 
 body {
-  font-family: 'Bitter', serif;
+  font-family: 'Bitter';
   font-weight: 400;
   font-size: 16px;
   background-color: var(--color-bg);
@@ -42,4 +42,12 @@ a {
 
 ul, ol {
   list-style: none;
+}
+
+@font-face {
+  font-family: 'Bitter'; /* Give the font a name */
+  src: url('../../assets/fonts/bitter-regular.woff') format('woff');
+  font-weight: normal;  /* 400, bold and etc. */
+  font-style: normal;
+  font-display: swap; /* Optional: improves loading perception */
 }
