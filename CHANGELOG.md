@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0hf] - 2026-04-27
+
+### Description
+EN / Hot fix local fonts and create new note window!
+RU / Быстрый фикс локальных шрифтов и окна создания заметки!
+
 ## [0.3.0] - 2026-04-18
 
 ### Description

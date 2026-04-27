@@ -1,6 +1,6 @@
 {
   "name": "flowmode",
-  "version": "0.3.1",
+  "version": "0.3.0hf",
   "description": "Ежедневник на Tauri + Vue",
   "type": "module",
   "scripts": {

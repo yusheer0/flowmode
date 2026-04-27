@@ -1,9 +1,9 @@
 [package]
 name = "daily-diary"
-version = "0.3.0"
-description = "Ежедневник на Tauri + Vue"
+version = "0.3.0hf"
+description = "Flowmode - локальный ежедневник"
 authors = ["you"]
-edition = "2021"
+edition = "2026"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
