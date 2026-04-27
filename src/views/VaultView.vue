@@ -12,16 +12,6 @@ import { useSettingsStore, useVaultStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import type { VaultItem } from '@/types'
 import { normalizeUrl } from '@/utils/vault'
-import { useRouter } from 'vue-router'
-
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
-  embedded: false,
-})
-
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
-const router = useRouter()
 
 const vaultStore = useVaultStore()
 const settingsStore = useSettingsStore()
