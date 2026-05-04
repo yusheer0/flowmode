@@ -26,7 +26,7 @@ export function useCanvasBackground(t: TranslateFn) {
     return Boolean(settingsStore.settings.canvasBackgroundImage)
   })
 
-  const canvasStyle = computed<Record<string, string>>(() => {
+  const canvasStyle = computed(() => {
     const image = settingsStore.settings.canvasBackgroundImage
     if (!image) return {}
 
