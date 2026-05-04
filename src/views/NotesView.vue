@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Layers3, Search, Cog, SquarePlus, X, Grid2x2 } from 'lucide-vue-next'
+import { Layers3, Search, Cog, SquarePlus, X, Grid2x2, Box } from 'lucide-vue-next'
 import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
 import SearchSheet from '@/components/common/SearchSheet.vue'
 import NoteCard from '@/components/notes/NoteCard.vue'
@@ -10,11 +10,16 @@ import { useNotesStore, useSettingsStore } from '@/stores'
 import type { Note } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
 import { useAppUpdater } from '@/composables/useAppUpdater'
+import { useDataExport } from '@/composables/useDataExport'
+import { useCanvasBackground } from '@/composables/useCanvasBackground'
 import { TRANSLATIONS } from '@/translations/translations'
 import { getNoteBackground, NOTE_COLORS } from '@/utils/noteVisuals'
+import { useRoute, useRouter } from 'vue-router'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
+const router = useRouter()
+const route = useRoute()
 const searchQuery = ref('')
 const debouncedSearchQuery = ref('')
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -45,6 +50,7 @@ const isLayerDeleteConfirmModalOpen = ref(false)
 const pendingDeleteLayerId = ref<string | null>(null)
 const newLayerName = ref('')
 const layerFormError = ref('')
+const isViewPickerModalOpen = ref(false)
 const githubUrl = 'https://github.com/yusheer0/flowmode'
 
 const sortedNotes = computed(() => notesStore.sortNotes(notesStore.getActiveNotesByLayer(), 'important'))
@@ -69,6 +75,13 @@ const hasNoLayers = computed(() => notesStore.layers.length === 0)
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
 const translateForUpdater = (key: string): string => t(key as keyof typeof TRANSLATIONS.en)
+const canvasBackgroundInputId = 'notes-canvas-background-input'
+const {
+  hasCanvasBackground,
+  canvasStyle,
+  clearCanvasBackground,
+  applyCanvasBackgroundFromEvent,
+} = useCanvasBackground(t)
 const CRITICALITY_OPTIONS = computed(() => [
   { value: 'low', label: t('criticalityLow') },
   { value: 'medium', label: t('criticalityMedium') },
@@ -76,6 +89,11 @@ const CRITICALITY_OPTIONS = computed(() => [
 ] as const)
 const activeLayerLabel = computed(() => {
   return notesStore.getLayerName(notesStore.activeLayerId) || t('noLayerSelected')
+})
+const activeView = computed<'notes' | 'vault' | 'habits'>(() => {
+  if (route.name === 'vault') return 'vault'
+  if (route.name === 'habits') return 'habits'
+  return 'notes'
 })
 const {
   appVersion,
@@ -94,6 +112,7 @@ const {
   updateStatus,
   updateTargetVersion,
 } = useAppUpdater(translateForUpdater)
+const { isExporting, exportAllData } = useDataExport()
 
 function openCreateModal(): void {
   if (hasNoLayers.value) {
@@ -131,6 +150,28 @@ function openSearchModal(): void {
 
 function closeSearchModal(): void {
   isSearchModalOpen.value = false
+}
+
+function openViewPickerModal(): void {
+  isViewPickerModalOpen.value = true
+}
+
+function closeViewPickerModal(): void {
+  isViewPickerModalOpen.value = false
+}
+
+function openView(view: 'notes' | 'vault' | 'habits'): void {
+  closeViewPickerModal()
+  if (view === activeView.value) return
+  if (view === 'vault') {
+    void router.push('/vault')
+    return
+  }
+  if (view === 'habits') {
+    void router.push('/habits')
+    return
+  }
+  void router.push('/notes')
 }
 
 function openLayerModal(): void {
@@ -214,6 +255,17 @@ function updateLanguage(value: 'ru' | 'en'): void {
 
 function updateTheme(value: 'light' | 'dark'): void {
   settingsStore.updateSettings({ theme: value })
+}
+
+async function handleExportData(): Promise<void> {
+  const result = await exportAllData()
+  if (result.status === 'success') {
+    window.alert(`${t('exportDataSuccess')}.\n${result.path}`)
+    return
+  }
+  if (result.status === 'error') {
+    window.alert(t('exportDataError'))
+  }
 }
 
 function createNote(): void {
@@ -326,7 +378,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section :class="$style.notesView">
-    <div :class="$style.canvas">
+    <div :class="$style.canvas" :style="canvasStyle">
       <NoteCard
         v-for="note in filteredNotes"
         :key="note.id"
@@ -474,6 +526,46 @@ onBeforeUnmount(() => {
               {{ t('themeDark') }}
             </button>
           </div>
+        </div>
+        <div :class="$style.settingsGroup">
+          <span :class="$style.settingsLabel">{{ t('canvasBackgroundSetting') }}</span>
+          <div :class="$style.settingsOptions">
+            <input
+              :id="canvasBackgroundInputId"
+              type="file"
+              accept="image/*"
+              :class="$style.hiddenInput"
+              @change="applyCanvasBackgroundFromEvent"
+            />
+            <label
+              :for="canvasBackgroundInputId"
+              :class="$style.settingsOption"
+            >
+              {{ t('canvasBackgroundUploadButton') }}
+            </label>
+            <button
+              type="button"
+              :class="$style.settingsOption"
+              :disabled="!hasCanvasBackground"
+              @click="clearCanvasBackground"
+            >
+              {{ t('canvasBackgroundResetButton') }}
+            </button>
+          </div>
+          <p v-if="hasCanvasBackground" :class="$style.layerHint">
+            {{ t('canvasBackgroundApplied') }}
+          </p>
+        </div>
+        <div :class="$style.settingsGroup">
+          <span :class="$style.settingsLabel">{{ t('exportDataSetting') }}</span>
+          <button
+            type="button"
+            :class="$style.updateButton"
+            :disabled="isExporting"
+            @click="handleExportData"
+          >
+            {{ t('exportDataButton') }}
+          </button>
         </div>
         <div :class="$style.settingsGroup">
           <span :class="$style.settingsLabel">{{ t('updateSetting') }}</span>
@@ -645,6 +737,43 @@ onBeforeUnmount(() => {
         @confirm="confirmDeleteLayer"
       />
 
+    <SheetModal
+      :is-open="isViewPickerModalOpen"
+      :overlay-class="$style.modalOverlay"
+      :sheet-class="$style.modalSheet"
+      :close-button-class="$style.modalClose"
+      :title-class="$style.modalTitle"
+      title="View"
+      :close-title="t('close')"
+      @close="closeViewPickerModal"
+    >
+      <div :class="$style.settingsGroup">
+        <div :class="$style.settingsOptions">
+          <button
+            :class="[$style.settingsOption, { [$style.settingsOptionActive]: activeView === 'notes' }]"
+            type="button"
+            @click="openView('notes')"
+          >
+            {{ t('notesViewTitle') }}
+          </button>
+          <button
+            :class="[$style.settingsOption, { [$style.settingsOptionActive]: activeView === 'vault' }]"
+            type="button"
+            @click="openView('vault')"
+          >
+            {{ t('vaultViewTitle') }}
+          </button>
+          <button
+            :class="[$style.settingsOption, { [$style.settingsOptionActive]: activeView === 'habits' }]"
+            type="button"
+            @click="openView('habits')"
+          >
+            {{ t('habitsViewTitle') }}
+          </button>
+        </div>
+      </div>
+    </SheetModal>
+
     <!-- Bottom Dock -->
     <nav :class="$style.bottomDock">
       <button
@@ -654,7 +783,7 @@ onBeforeUnmount(() => {
         :disabled="hasNoLayers"
         @click="openCreateModal"
       >
-        <SquarePlus :size="20" />
+        <SquarePlus :size="24" />
       </button>
       <button
         :class="[$style.dockButton, { [$style.dockButtonActive]: isSearchModalOpen }]"
@@ -662,15 +791,15 @@ onBeforeUnmount(() => {
         :title="t('searchTitle')"
         @click="openSearchModal"
       >
-        <Search :size="20" />
+        <Search :size="24" />
       </button>
       <button
-        :class="[$style.dockButton, { [$style.dockButtonActive]: isLayerModalOpen }]"
+        :class="[$style.dockButton, { [$style.dockButtonActive]: isViewPickerModalOpen }]"
         type="button"
-        :title="`${t('layerTitle')}: ${activeLayerLabel}`"
-        @click="openLayerModal"
+        title="View"
+        @click="openViewPickerModal"
       >
-        <Layers3 :size="20" />
+      <Grid2x2 :size="24" />
       </button>
       <button
         :class="[$style.dockButton, { [$style.dockButtonActive]: isSettingsModalOpen }]"
@@ -678,7 +807,7 @@ onBeforeUnmount(() => {
         :title="t('settingsTitle')"
         @click="openSettingsModal"
       >
-        <Cog :size="20" />
+        <Cog :size="24" />
       </button>
       <button
         :class="[$style.dockButton, { [$style.dockButtonActive]: isAboutModalOpen }]"
@@ -686,15 +815,23 @@ onBeforeUnmount(() => {
         :title="t('aboutTitle')"
         @click="openAboutModal"
       >
-        <Grid2x2 :size="20" />
+        <Box :size="24" />
       </button>
     </nav>
 
     <div :class="$style.layerStatusDock">
-      <div :class="$style.layerStatusWrapper">
-        <Layers3 :size="18" color="#ffffff" />
+      <button
+        type="button"
+        :class="[
+          $style.layerStatusWrapper,
+          { [$style.layerStatusWrapperActive]: isLayerModalOpen },
+        ]"
+        :title="`${t('layerTitle')}: ${activeLayerLabel}`"
+        @click="openLayerModal"
+      >
+        <Layers3 :size="20" color="#ffffff" />
         <strong :class="$style.layerStatusValue">{{ activeLayerLabel }}</strong>
-      </div>
+      </button>
     </div>
   </section>
 </template>

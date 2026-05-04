@@ -21,7 +21,8 @@
 
 .canvas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 300px));
+  justify-content: start;
   align-content: start;
   gap: 12px;
   width: 100%;
@@ -29,7 +30,8 @@
   padding: 12px;
   overflow: auto;
   background-color: #fff;
-  border-radius: 16px;
+  border-radius: 24px;
+  corner-shape: squircle;
 }
 
 .noteCard {
@@ -37,10 +39,11 @@
   width: 100%;
   min-width: 0;
   min-height: 220px;
-  border-radius: 16px;
+  border-radius: 24px;
+  corner-shape: squircle;
   padding: 32px 24px;
   padding-bottom: 44px;
-  background: rgba(120, 120, 125, 0.55);
+  background: rgba(104, 104, 104, 0.747);
   color: #ffffff;
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -172,7 +175,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: 8px;
 }
 
 .modalSheet {
@@ -273,14 +276,15 @@
 .modalSaveButton,
 .modalDeleteButton,
 .modalCancelButton {
-  height: 40px;
+  height: 46px;
   border-radius: 10px;
-  padding: 0 18px;
+  padding: 0 20px;
+  font-size: 14px;
 }
 
 .modalSaveButton {
   color: #ffffff;
-  background: #1a7f37;
+  background: #229b44b0;
 
   &:disabled {
     opacity: 0.45;
@@ -290,7 +294,7 @@
 
 .modalDeleteButton {
   color: #ffffff;
-  background: #cf222e;
+  background: #cf222dc4;
 }
 
 .modalCancelButton {
@@ -519,8 +523,12 @@
 
 .settingsOptions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
+}
+
+.hiddenInput {
+  display: none;
 }
 
 .settingsLabel {
@@ -887,9 +895,10 @@
   gap: 0px;
   padding: 8px;
   padding-bottom: 0px;
-  border-radius: 14px;
+  border-radius: 24px;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
+  corner-shape: squircle;
   background: #dcdcdc;
 }
 
@@ -900,7 +909,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
+  height: 52px;
   padding: 8px;
   padding-bottom: 0;
   border-radius: 14px;
@@ -916,8 +925,19 @@
   align-items: center;
   gap: 12px;
   background: #000;
+  border: 0;
   border-radius: 8px;
   padding: 0 12px;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: #131313;
+  }
+}
+
+.layerStatusWrapperActive {
+  background: #0f1115;
 }
 
 .layerStatusLabel {
@@ -927,7 +947,7 @@
 
 .layerStatusValue {
   line-height: 1.2;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   color: #ffffff;
   max-width: 180px;
@@ -937,8 +957,8 @@
 }
 
 .dockButton {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   color: #1e1e1f;
   display: grid;
@@ -953,6 +973,13 @@
     opacity: 0.45;
     cursor: default;
   }
+}
+
+.dockButtonText {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
 }
 
 .dockButtonActive {

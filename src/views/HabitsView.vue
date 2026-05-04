@@ -1,88 +1,37 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Cog, Grid2x2, Search, SquarePlus, Box } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { Check, Cog, Grid2x2, Search, SquarePlus, Trash2, Box } from 'lucide-vue-next'
 import SheetModal from '@/components/SheetModal.vue'
 import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
 import SearchSheet from '@/components/common/SearchSheet.vue'
-import VaultEntrySheet from '@/components/vault/VaultEntrySheet.vue'
-import VaultItemCard from '@/components/vault/VaultItemCard.vue'
-import { useCopyFeedback } from '@/composables/useCopyFeedback'
 import { useDataExport } from '@/composables/useDataExport'
 import { useCanvasBackground } from '@/composables/useCanvasBackground'
-import { useVaultEntryForm } from '@/composables/useVaultEntryForm'
-import { useVaultListFilter } from '@/composables/useVaultListFilter'
-import { useSettingsStore, useVaultStore } from '@/stores'
+import { useSettingsStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
-import type { VaultItem } from '@/types'
-import { normalizeUrl } from '@/utils/vault'
+import type { Habit } from '@/types'
 import { useRoute, useRouter } from 'vue-router'
 
-const vaultStore = useVaultStore()
+const HABITS_STORAGE_KEY = 'habitsTrackerItems'
+
 const settingsStore = useSettingsStore()
 const router = useRouter()
 const route = useRoute()
-
-const searchQuery = ref('')
+const habits = ref<Habit[]>([])
+const newHabitName = ref('')
+const isCreateModalOpen = ref(false)
 const isSearchModalOpen = ref(false)
 const isSettingsModalOpen = ref(false)
 const isAboutModalOpen = ref(false)
 const isViewPickerModalOpen = ref(false)
 const isDeleteConfirmModalOpen = ref(false)
-const pendingDeleteItemId = ref<string | null>(null)
-const scrollHost = ref<HTMLElement | null>(null)
-const listPane = ref<HTMLElement | null>(null)
-const scrollTop = ref(0)
-const viewportHeight = ref(0)
-const columnCount = ref(1)
+const pendingDeleteHabitId = ref<string | null>(null)
+const searchQuery = ref('')
 const githubUrl = 'https://github.com/yusheer0/flowmode'
-let resizeObserver: ResizeObserver | null = null
-
-const MIN_CARD_WIDTH = 300
-const ESTIMATED_CARD_HEIGHT = 186
-const CARD_GAP = 12
-const OVERSCAN_ROWS = 3
-
-const {
-  form,
-  isFormModalOpen,
-  isEditing,
-  editingId,
-  isPasswordVisible,
-  editPasswordMask,
-  canSaveForm,
-  openCreateModal: openCreateEntryModal,
-  openEditModal: openEditEntryModal,
-  closeFormModal,
-  togglePasswordVisibility,
-  handlePasswordInput,
-  saveForm,
-  cleanup,
-} = useVaultEntryForm(vaultStore)
-
-const { isLoginCopied, isPasswordCopied, activate, resetState, clearTimers } = useCopyFeedback()
 const { isExporting, exportAllData } = useDataExport()
-const { filteredItems } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
-const rowStride = computed(() => ESTIMATED_CARD_HEIGHT + CARD_GAP)
-const totalRows = computed(() => Math.ceil(filteredItems.value.length / columnCount.value))
-const startRow = computed(() => {
-  const firstVisibleRow = Math.max(0, Math.floor(scrollTop.value / rowStride.value) - OVERSCAN_ROWS)
-  const maxStartRow = Math.max(0, totalRows.value - 1)
-  return Math.min(firstVisibleRow, maxStartRow)
-})
-const visibleRowCount = computed(() => {
-  const base = Math.ceil(viewportHeight.value / rowStride.value)
-  return Math.max(1, base + OVERSCAN_ROWS * 2)
-})
-const endRow = computed(() => Math.min(totalRows.value, startRow.value + visibleRowCount.value))
-const startIndex = computed(() => startRow.value * columnCount.value)
-const endIndex = computed(() => Math.min(filteredItems.value.length, endRow.value * columnCount.value))
-const visibleItems = computed(() => filteredItems.value.slice(startIndex.value, endIndex.value))
-const topSpacerHeight = computed(() => startRow.value * rowStride.value)
-const bottomSpacerHeight = computed(() => Math.max(0, (totalRows.value - endRow.value) * rowStride.value))
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
-const canvasBackgroundInputId = 'vault-canvas-background-input'
+const canvasBackgroundInputId = 'habits-canvas-background-input'
 const {
   hasCanvasBackground,
   canvasStyle,
@@ -94,30 +43,94 @@ const activeView = computed<'notes' | 'vault' | 'habits'>(() => {
   if (route.name === 'habits') return 'habits'
   return 'notes'
 })
-const entryLabels = computed(() => ({
-  createTitle: t('createTitle'),
-  editTitle: t('editTitle'),
-  close: t('close'),
-  titlePlaceholder: t('titlePlaceholder'),
-  usernamePlaceholder: t('usernamePlaceholder'),
-  passwordPlaceholder: t('passwordPlaceholder'),
-  urlPlaceholder: t('urlPlaceholder'),
-  copy: t('copy'),
-  copied: t('copied'),
-  hide: t('hide'),
-  reveal: t('reveal'),
-  goToUrl: t('goToUrl'),
-  save: t('save'),
-}))
+const today = computed(() => toDateKey(new Date()))
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase())
+const filteredHabits = computed(() => {
+  const query = normalizedSearchQuery.value
+  if (!query) return habits.value
+  return habits.value.filter((habit) => habit.name.toLowerCase().includes(query))
+})
 
-function openCreateModal(): void {
-  resetState()
-  openCreateEntryModal()
+function toDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-function openEditModal(item: VaultItem): void {
-  resetState()
-  openEditEntryModal(item)
+function loadHabits(): void {
+  const raw = localStorage.getItem(HABITS_STORAGE_KEY)
+  if (!raw) {
+    habits.value = []
+    return
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Habit[]
+    habits.value = Array.isArray(parsed)
+      ? parsed.filter((habit): habit is Habit => typeof habit?.id === 'string' && typeof habit?.name === 'string')
+      : []
+  } catch {
+    habits.value = []
+  }
+}
+
+function saveHabits(): void {
+  localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(habits.value))
+}
+
+function isHabitDoneToday(habit: Habit): boolean {
+  return habit.completedDates.includes(today.value)
+}
+
+function addHabit(): void {
+  const name = newHabitName.value.trim()
+  if (!name) return
+
+  const nextHabit: Habit = {
+    id: crypto.randomUUID(),
+    name,
+    icon: 'check',
+    color: '#64748b',
+    frequency: 'daily',
+    createdAt: new Date().toISOString(),
+    completedDates: [],
+  }
+
+  habits.value = [nextHabit, ...habits.value]
+  closeCreateModal()
+  saveHabits()
+}
+
+function toggleHabitDone(habitId: string): void {
+  habits.value = habits.value.map((habit) => {
+    if (habit.id !== habitId) return habit
+    const hasToday = habit.completedDates.includes(today.value)
+    const nextCompletedDates = hasToday
+      ? habit.completedDates.filter(date => date !== today.value)
+      : [...habit.completedDates, today.value]
+
+    return {
+      ...habit,
+      completedDates: nextCompletedDates,
+    }
+  })
+  saveHabits()
+}
+
+function deleteHabit(habitId: string): void {
+  habits.value = habits.value.filter(habit => habit.id !== habitId)
+  saveHabits()
+}
+
+function openCreateModal(): void {
+  newHabitName.value = ''
+  isCreateModalOpen.value = true
+}
+
+function closeCreateModal(): void {
+  isCreateModalOpen.value = false
+  newHabitName.value = ''
 }
 
 function openSearchModal(): void {
@@ -151,44 +164,7 @@ function openView(view: 'notes' | 'vault' | 'habits'): void {
 }
 
 function updateSearchQuery(value: string): void {
-  searchQuery.value = value.trim()
-}
-
-function syncViewportMetrics(): void {
-  if (!scrollHost.value) return
-  viewportHeight.value = scrollHost.value.clientHeight
-}
-
-function syncColumnCount(): void {
-  if (!listPane.value) return
-  const containerWidth = listPane.value.clientWidth
-  if (containerWidth <= 0) {
-    columnCount.value = 1
-    return
-  }
-  const nextColumnCount = Math.max(
-    1,
-    Math.floor((containerWidth + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)),
-  )
-  columnCount.value = nextColumnCount
-}
-
-function syncViewportState(): void {
-  syncViewportMetrics()
-  syncColumnCount()
-}
-
-function onListScroll(event: Event): void {
-  const target = event.target as HTMLElement
-  scrollTop.value = target.scrollTop
-}
-
-function toggleSearchModal(): void {
-  if (isSearchModalOpen.value) {
-    closeSearchModal()
-    return
-  }
-  openSearchModal()
+  searchQuery.value = value
 }
 
 function openSettingsModal(): void {
@@ -226,141 +202,99 @@ async function handleExportData(): Promise<void> {
   }
 }
 
-function requestDelete(itemId: string): void {
-  pendingDeleteItemId.value = itemId
+function requestDeleteHabit(habitId: string): void {
+  pendingDeleteHabitId.value = habitId
   isDeleteConfirmModalOpen.value = true
 }
 
-async function copyLogin(itemId: string): Promise<void> {
-  const copied = await vaultStore.copyUsername(itemId)
-  if (copied) {
-    activate('login')
-  }
-}
-
-async function copyPassword(itemId: string): Promise<void> {
-  const copied = await vaultStore.copyPassword(itemId)
-  if (copied) {
-    activate('password')
-  }
-}
-
-async function copyEditingLogin(): Promise<void> {
-  if (!editingId.value) return
-  await copyLogin(editingId.value)
-}
-
-async function copyEditingPassword(): Promise<void> {
-  if (!editingId.value) return
-  await copyPassword(editingId.value)
-}
-
-function openUrl(url?: string): void {
-  if (!url) return
-  const normalized = normalizeUrl(url.trim())
-  if (!normalized) return
-  window.open(normalized, '_blank', 'noopener,noreferrer')
-}
-
-function closeDeleteConfirmModal(): void {
+function closeDeleteConfirm(): void {
   isDeleteConfirmModalOpen.value = false
-  pendingDeleteItemId.value = null
+  pendingDeleteHabitId.value = null
 }
 
-async function confirmDelete(): Promise<void> {
-  if (!pendingDeleteItemId.value) return
-  await vaultStore.deleteItem(pendingDeleteItemId.value)
-  closeDeleteConfirmModal()
+function confirmDeleteHabit(): void {
+  if (!pendingDeleteHabitId.value) return
+  deleteHabit(pendingDeleteHabitId.value)
+  closeDeleteConfirm()
 }
 
-onMounted(async () => {
-  await vaultStore.refreshItems()
-  syncViewportState()
-
-  resizeObserver = new ResizeObserver(() => {
-    syncViewportState()
-  })
-
-  if (scrollHost.value) {
-    resizeObserver.observe(scrollHost.value)
-  }
-  if (listPane.value) {
-    resizeObserver.observe(listPane.value)
-  }
-})
-
-onBeforeUnmount(() => {
-  cleanup()
-  clearTimers()
-  resizeObserver?.disconnect()
-  resizeObserver = null
+onMounted(() => {
+  settingsStore.init()
+  loadHabits()
 })
 </script>
 
 <template>
-  <section :class="$style.vaultView">
-    <div ref="scrollHost" :class="$style.canvas" :style="canvasStyle" @scroll="onListScroll">
-      <div :class="$style.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
-      <div
-        ref="listPane"
-        :class="$style.listPane"
-        :style="{ '--vault-card-min-width': `${MIN_CARD_WIDTH}px` }"
+  <section :class="$style.habitsView">
+    <div :class="$style.canvas" :style="canvasStyle">
+      <article
+        v-for="habit in filteredHabits"
+        :key="habit.id"
+        :class="[$style.card, { [$style.cardDone]: isHabitDoneToday(habit) }]"
       >
-        <VaultItemCard
-          v-for="item in visibleItems"
-          :key="item.id"
-          :item="item"
-          :styles="$style"
-          :login-label="t('loginLabel')"
-          :password-label="t('passwordLabel')"
-          :delete-title="t('delete')"
-          @edit="openEditModal"
-          @delete="requestDelete"
-        />
-        <p v-if="!filteredItems.length" :class="$style.emptyState">
-          {{ t('emptyState') }}
-        </p>
-      </div>
-      <div :class="$style.virtualSpacer" :style="{ height: `${bottomSpacerHeight}px` }"></div>
+        <h3 :class="$style.cardTitle">{{ habit.name }}</h3>
+
+        <div :class="$style.actions">
+          <button
+            type="button"
+            :class="[$style.cardAction, { [$style.cardActionActive]: isHabitDoneToday(habit) }]"
+            @click="toggleHabitDone(habit.id)"
+          >
+            <Check :size="14" />
+          </button>
+
+          <button
+            type="button"
+            :class="$style.cardAction"
+            :title="t('habitsDeleteTitle')"
+            @click="requestDeleteHabit(habit.id)"
+          >
+            <Trash2 :size="14" />
+          </button>
+        </div>
+      </article>
+
+      <p v-if="!filteredHabits.length" :class="$style.emptyState">
+        {{ t('habitsEmptyState') }}
+      </p>
     </div>
 
-    <VaultEntrySheet
-      :is-open="isFormModalOpen"
-      :is-editing="isEditing"
-      :title-value="form.title"
-      :username-value="form.username"
-      :password-value="form.password"
-      :url-value="form.url"
-      :is-password-visible="isPasswordVisible"
-      :edit-password-mask="editPasswordMask"
-      :is-login-copied="isLoginCopied"
-      :is-password-copied="isPasswordCopied"
-      :can-save="canSaveForm"
-      :styles="$style"
-      :labels="entryLabels"
-      @close="closeFormModal"
-      @save="saveForm"
-      @update:title="(value) => (form.title = value)"
-      @update:username="(value) => (form.username = value)"
-      @update:password="(value) => (form.password = value)"
-      @update:url="(value) => (form.url = value)"
-      @password-input="handlePasswordInput"
-      @toggle-password="togglePasswordVisibility"
-      @copy-login="copyEditingLogin"
-      @copy-password="copyEditingPassword"
-      @open-url="openUrl"
-    />
+    <SheetModal
+      :is-open="isCreateModalOpen"
+      :overlay-class="$style.modalOverlay"
+      :sheet-class="$style.modalSheet"
+      :close-button-class="$style.modalClose"
+      :title-class="$style.modalTitle"
+      :title="t('habitsHeaderTitle')"
+      :close-title="t('close')"
+      @close="closeCreateModal"
+    >
+      <form :class="$style.modalContent" @submit.prevent="addHabit">
+        <input
+          v-model.trim="newHabitName"
+          :class="$style.modalInput"
+          :placeholder="t('habitsAddPlaceholder')"
+        />
+        <button
+          type="submit"
+          :class="$style.modalCreateButton"
+          :disabled="newHabitName.length === 0"
+        >
+          {{ t('habitsAddButton') }}
+        </button>
+      </form>
+    </SheetModal>
 
     <ConfirmSheet
       :is-open="isDeleteConfirmModalOpen"
       :title="t('deleteConfirmTitle')"
-      :message="t('deleteConfirmDescription')"
-      :cancel-label="t('cancel')"
-      :confirm-label="t('delete')"
+      :message="t('habitsDeleteTitle')"
+      :cancel-label="t('cancelButton')"
+      :confirm-label="t('deleteButton')"
       :styles="$style"
-      @close="closeDeleteConfirmModal"
-      @cancel="closeDeleteConfirmModal"
-      @confirm="confirmDelete"
+      @close="closeDeleteConfirm"
+      @cancel="closeDeleteConfirm"
+      @confirm="confirmDeleteHabit"
     />
 
     <SearchSheet
@@ -443,7 +377,7 @@ onBeforeUnmount(() => {
             accept="image/*"
             :class="$style.hiddenInput"
             @change="applyCanvasBackgroundFromEvent"
-          >
+          />
           <label
             :for="canvasBackgroundInputId"
             :class="$style.settingsOption"
@@ -459,7 +393,7 @@ onBeforeUnmount(() => {
             {{ t('canvasBackgroundResetButton') }}
           </button>
         </div>
-        <p v-if="hasCanvasBackground" :class="$style.updateMeta">
+        <p v-if="hasCanvasBackground" :class="$style.settingsHint">
           {{ t('canvasBackgroundApplied') }}
         </p>
       </div>
@@ -542,9 +476,9 @@ onBeforeUnmount(() => {
 
     <nav :class="$style.bottomDock">
       <button
-        :class="$style.dockButton"
+        :class="[$style.dockButton, { [$style.dockButtonActive]: isCreateModalOpen }]"
         type="button"
-        :title="t('createEntry')"
+        :title="t('habitsAddButton')"
         @click="openCreateModal"
       >
         <SquarePlus :size="24" />
@@ -553,7 +487,7 @@ onBeforeUnmount(() => {
         :class="[$style.dockButton, { [$style.dockButtonActive]: isSearchModalOpen }]"
         type="button"
         :title="t('searchTitle')"
-        @click="toggleSearchModal"
+        @click="openSearchModal"
       >
         <Search :size="24" />
       </button>
@@ -563,7 +497,7 @@ onBeforeUnmount(() => {
         title="View"
         @click="openViewPickerModal"
       >
-        <Grid2x2 :size="24" />
+      <Grid2x2 :size="24" />
       </button>
       <button
         :class="[$style.dockButton, { [$style.dockButtonActive]: isSettingsModalOpen }]"
@@ -585,4 +519,4 @@ onBeforeUnmount(() => {
   </section>
 </template>
 
-<style lang="scss" module src="./VaultView.module.scss"></style>
+<style lang="scss" module src="./HabitsView.module.scss"></style>

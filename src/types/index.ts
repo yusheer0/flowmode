@@ -54,6 +54,7 @@ export interface MoodEntry {
 export interface AppSettings {
   theme: 'light' | 'dark'
   language: 'ru' | 'en'
+  canvasBackgroundImage: string | null
   notificationsEnabled: boolean
   backupEnabled: boolean
   minimizeOnClose: boolean

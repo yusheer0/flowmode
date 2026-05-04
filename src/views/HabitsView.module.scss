@@ -1,4 +1,4 @@
-.vaultView {
+.habitsView {
   position: relative;
   height: 100%;
   background: #dcdcdc;
@@ -14,22 +14,14 @@
   background-color: #ffffff;
   border-radius: 24px;
   corner-shape: squircle;
-}
-
-.listPane {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--vault-card-min-width, 300px), var(--vault-card-min-width, 300px)));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 300px));
   justify-content: start;
-  gap: 12px;
   align-content: start;
-  min-height: min-content;
+  gap: 12px;
 }
 
-.virtualSpacer {
-  width: 100%;
-  flex-shrink: 0;
-}
-
+.statsCard,
 .card {
   position: relative;
   width: 100%;
@@ -39,7 +31,6 @@
   corner-shape: squircle;
   padding: 24px;
   padding-bottom: 44px;
-  background: rgba(104, 104, 104, 0.747);
   color: #ffffff;
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -47,33 +38,41 @@
   gap: 8px;
   align-content: start;
   overflow: hidden;
+}
+
+.statsCard {
+  background: rgba(104, 104, 104, 0.747);
+}
+
+.card {
+  background: rgba(104, 104, 104, 0.747);
 
   &:hover {
     cursor: pointer;
   }
 }
 
+.cardDone {
+  background: rgba(26, 127, 55, 0.7);
+}
+
+.statsTitle,
 .cardTitle {
   margin: 0;
-  padding-bottom: 10px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   font-size: 24px;
   line-height: 1.2;
   font-weight: 500;
   word-break: break-word;
 }
 
-.cardText {
+.statsText,
+.cardText,
+.cardStatus {
   margin: 0;
   color: inherit;
-  font-size: 16px;
-  line-height: 1.2;
-  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
   word-break: break-word;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .actions {
@@ -107,15 +106,15 @@
   background: #c1c1c1;
   transition: background-color 0.4s ease, color 0.4s ease;
 
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-
   &:hover {
     background: #000000;
     color: #ffffff;
   }
+}
+
+.cardActionActive {
+  background: #6e6e73;
+  color: #000000;
 }
 
 .emptyState {
@@ -135,20 +134,6 @@
   justify-content: center;
 }
 
-.deleteConfirmOverlay {
-  z-index: 10;
-}
-
-.topModalOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 8px;
-}
-
 .modalSheet {
   position: relative;
   width: min(680px, 100%);
@@ -161,12 +146,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.topModalSheet {
-  width: min(680px, 100%);
-  border-radius: 18px;
-  max-height: calc(100vh - 72px);
 }
 
 .modalClose {
@@ -191,6 +170,12 @@
   font-size: 20px;
 }
 
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .modalInput {
   width: 100%;
   height: 40px;
@@ -206,71 +191,26 @@
   }
 }
 
-.inputInlineAction {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0;
-}
-
-.inputInlineAction .modalInput {
-  padding-right: 12px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.fieldInlineButtons {
-  display: inline-flex;
-  align-items: stretch;
-}
-
-.fieldInlineButton {
-  min-width: 76px;
-  height: 40px;
-  border: 1px solid #d7d7dc;
-  border-left: 0;
-  border-radius: 0;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-  background: #f5f5f8;
-  color: #1e1f24;
-  font-size: 12px;
-  padding: 0 10px;
-}
-
-.fieldInlineButtons .fieldInlineButton + .fieldInlineButton {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-left: 1px solid #d7d7dc;
-}
-
-.fieldInlineButtons .fieldInlineButton:last-child {
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-.modalActions {
+.modalCreateButton {
   align-self: flex-end;
-  display: flex;
-  gap: 8px;
-}
-
-.modalSaveButton,
-.modalDeleteButton,
-.modalCancelButton {
   height: 40px;
   border-radius: 10px;
   padding: 0 18px;
-}
-
-.modalSaveButton {
   color: #ffffff;
-  background: #1a7f37;
+  background: #111318;
 
   &:disabled {
     opacity: 0.45;
     cursor: default;
   }
+}
+
+.modalCancelButton,
+.modalDeleteButton {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 0 20px;
+  font-size: 14px;
 }
 
 .modalDeleteButton {
@@ -296,33 +236,6 @@
   gap: 8px;
 }
 
-.searchSheet {
-  min-height: 150px;
-}
-
-.searchField {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid #d7d7dc;
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: #65656f;
-}
-
-.searchInput {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: #1e1f24;
-  font-size: 14px;
-  outline: none;
-
-  &::placeholder {
-    color: #8a8a95;
-  }
-}
-
 .settingsGroup {
   display: grid;
   gap: 8px;
@@ -341,6 +254,12 @@
 .settingsLabel {
   font-size: 13px;
   color: #575860;
+}
+
+.settingsHint {
+  margin: 0;
+  color: #575860;
+  font-size: 12px;
 }
 
 .settingsOption {
@@ -467,33 +386,7 @@
   background-color: transparent;
 }
 
-:global(.top-sheet-enter-active),
-:global(.top-sheet-leave-active) {
-  transition: none;
-}
-
-:global(.top-sheet-enter-active) .topModalSheet,
-:global(.top-sheet-leave-active) .topModalSheet {
-  transition: transform 0.5s ease, opacity 0.5s ease;
-}
-
-:global(.top-sheet-enter-from),
-:global(.top-sheet-leave-to) {
-  background-color: transparent;
-}
-
-:global(.top-sheet-enter-from) .topModalSheet,
-:global(.top-sheet-leave-to) .topModalSheet {
-  transform: translateY(-28px);
-  opacity: 0;
-}
-
-:global(.top-sheet-enter-to),
-:global(.top-sheet-leave-from) {
-  background-color: transparent;
-}
-
-:global([data-theme='dark']) .vaultView {
+:global([data-theme='dark']) .habitsView {
   background: #000000;
 }
 
@@ -515,34 +408,20 @@
   background: #21262d;
 }
 
-:global([data-theme='dark']) .modalInput,
-:global([data-theme='dark']) .modalCancelButton,
-:global([data-theme='dark']) .searchField {
+:global([data-theme='dark']) .modalInput {
   border-color: #30363d;
   background: #0d1117;
   color: #e6edf3;
 }
 
-:global([data-theme='dark']) .cardTitle {
-  border-bottom-color: rgba(255, 255, 255, 0.24);
-}
-
-:global([data-theme='dark']) .fieldInlineButton {
+:global([data-theme='dark']) .modalCancelButton {
   border-color: #30363d;
   background: #0d1117;
   color: #e6edf3;
 }
 
-:global([data-theme='dark']) .fieldInlineButtons .fieldInlineButton + .fieldInlineButton {
-  border-left-color: #30363d;
-}
-
-:global([data-theme='dark']) .searchInput {
-  color: #e6edf3;
-
-  &::placeholder {
-    color: #8b949e;
-  }
+:global([data-theme='dark']) .confirmMessage {
+  color: #8b949e;
 }
 
 :global([data-theme='dark']) .settingsOption {
@@ -572,7 +451,7 @@
   background: #161b22;
 }
 
-:global([data-theme='dark']) .confirmMessage {
+:global([data-theme='dark']) .emptyState {
   color: #8b949e;
 }
 
@@ -591,4 +470,8 @@
 :global([data-theme='dark']) .cardAction:hover {
   background: #ffffff;
   color: #000000;
+}
+
+:global([data-theme='dark']) .cardDone {
+  background: rgba(26, 127, 55, 0.56);
 }

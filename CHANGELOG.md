@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-05-04
+
+### Description
+EN / Some redisign (new app icon, fix window size, new feature Habitats)
+RU / Немного поредизайнил (новая иконка приложения, пофиксил размер экрана приложения, оно теперь адаптивное и добавил новый функционал "Привычки")
+
 ## [0.3.1] - 2026-04-27
 
 ### Description

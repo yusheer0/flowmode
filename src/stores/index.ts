@@ -244,6 +244,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const defaultSettings: AppSettings = {
     theme: 'light',
     language: 'en',
+    canvasBackgroundImage: null,
     notificationsEnabled: false,
     backupEnabled: false,
     minimizeOnClose: false,
@@ -264,12 +265,16 @@ export const useSettingsStore = defineStore('settings', () => {
       const parsedLanguage = typeof parsedRaw.language === 'string'
         ? parsedRaw.language
         : undefined
+      const parsedCanvasBackgroundImage = typeof parsedRaw.canvasBackgroundImage === 'string'
+        ? parsedRaw.canvasBackgroundImage
+        : null
       settings.value = {
         ...defaultSettings,
         ...parsed,
         language: parsedLanguage === 'ko'
           ? 'en'
           : (parsed.language || defaultSettings.language),
+        canvasBackgroundImage: parsedCanvasBackgroundImage,
       }
       document.documentElement.setAttribute('data-theme', settings.value.theme)
     } catch (e) {

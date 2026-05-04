@@ -22,6 +22,11 @@ const router = createRouter({
           component: () => import('@/views/VaultView.vue'),
           name: 'vault',
         },
+        {
+          path: 'habits',
+          component: () => import('@/views/HabitsView.vue'),
+          name: 'habits',
+        },
       ],
     },
     { path: '/home', redirect: '/notes' },

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2, UserRound, Link2 } from 'lucide-vue-next'
 import type { VaultItem } from '@/types'
 
 type Props = {
@@ -24,9 +24,8 @@ const emit = defineEmits<{
     @click="emit('edit', item)"
   >
     <h3 :class="styles.cardTitle">{{ item.title }}</h3>
-    <p :class="styles.cardText"><strong>{{ loginLabel }} :</strong> {{ item.username }}</p>
-    <p :class="styles.cardText"><strong>{{ passwordLabel }} :</strong> {{ item.passwordMasked }}</p>
-    <p v-if="item.url" :class="styles.cardText"><strong>URL :</strong> {{ item.url }}</p>
+    <p :class="styles.cardText"><UserRound :size="20" /> {{ item.username }}</p>
+    <p v-if="item.url" :class="styles.cardText"><Link2 :size="20" /> {{ item.url }}</p>
     <div :class="styles.actions">
       <button
         :class="styles.cardAction"
