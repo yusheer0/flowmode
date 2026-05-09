@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import { useMergedShellStyles } from '@/composables/useMergedShellStyles'
 
 type Labels = {
   createTitle: string
@@ -30,10 +31,11 @@ type Props = {
   isPasswordCopied: boolean
   canSave: boolean
   labels: Labels
-  styles: Record<string, string>
 }
 
 defineProps<Props>()
+
+const styles = useMergedShellStyles()
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -92,7 +94,7 @@ function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 
     <div :class="styles.inputInlineAction">
       <input
         :value="usernameValue"
-        :class="styles.modalInput"
+        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
         :placeholder="labels.usernamePlaceholder"
         @input="onFieldUpdate($event, 'username')"
       />
@@ -109,7 +111,7 @@ function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 
     <div :class="styles.inputInlineAction">
       <input
         :value="passwordValue"
-        :class="styles.modalInput"
+        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
         :type="isPasswordVisible ? 'text' : 'password'"
         :placeholder="isEditing ? editPasswordMask || labels.passwordPlaceholder : labels.passwordPlaceholder"
         @input="
@@ -139,7 +141,7 @@ function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 
     <div :class="styles.inputInlineAction">
       <input
         :value="urlValue"
-        :class="styles.modalInput"
+        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
         :placeholder="labels.urlPlaceholder"
         @input="onFieldUpdate($event, 'url')"
       />
@@ -161,3 +163,5 @@ function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 
     </div>
   </SheetModal>
 </template>
+
+<style lang="scss" module src="./VaultEntrySheet.module.scss"></style>

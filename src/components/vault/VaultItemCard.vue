@@ -20,13 +20,14 @@ const emit = defineEmits<{
 
 <template>
   <article
+    data-view-card
     :class="styles.card"
     @click="emit('edit', item)"
   >
     <h3 :class="styles.cardTitle">{{ item.title }}</h3>
     <p :class="styles.cardText"><UserRound :size="20" /> {{ item.username }}</p>
     <p v-if="item.url" :class="styles.cardText"><Link2 :size="20" /> {{ item.url }}</p>
-    <div :class="styles.actions">
+    <div :class="styles.cardActions">
       <button
         :class="styles.cardAction"
         type="button"

@@ -1,0 +1,58 @@
+// Tauri updater bottom sheet — tokens in src/styles/variables.scss
+
+.updateSheet {
+  min-height: 240px;
+}
+
+.updateInlineStatus {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vs-update-inline-status-fg);
+}
+
+.updateInlineStatusSuccess {
+  color: var(--vs-update-inline-success-fg);
+}
+
+.updateInlineStatusError {
+  color: var(--vs-update-inline-error-fg);
+}
+
+.updateStatus {
+  margin: 0;
+  color: var(--vs-heading);
+  font-size: 14px;
+}
+
+.updateError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.updateMeta {
+  margin: 0;
+  color: var(--vs-body-muted);
+  font-size: 13px;
+}
+
+.updateProgressWrap {
+  display: grid;
+  gap: 8px;
+}
+
+.updateProgressTrack {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--vs-update-progress-track);
+  opacity: 0.6;
+  overflow: hidden;
+}
+
+.updateProgressValue {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--vs-update-progress-fill);
+  transition: width 0.2s ease;
+}

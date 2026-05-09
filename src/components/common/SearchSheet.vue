@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Search } from 'lucide-vue-next'
 import SheetModal from '@/components/SheetModal.vue'
+import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 
 type Props = {
   isOpen: boolean
@@ -8,7 +9,6 @@ type Props = {
   placeholder: string
   closeTitle: string
   modelValue: string
-  styles: Record<string, string>
 }
 
 defineProps<Props>()
@@ -17,6 +17,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'close'): void
 }>()
+
+const styles = useShellOnlyStyles()
 
 function onInput(event: Event): void {
   const target = event.target as HTMLInputElement
@@ -36,14 +38,14 @@ function onInput(event: Event): void {
     @close="emit('close')"
   >
     <div :class="styles.searchField">
-      <Search :size="16" />
+      <Search :size="22" />
       <input
         :value="modelValue"
         :class="styles.searchInput"
         :placeholder="placeholder"
         autofocus
         @input="onInput"
-      />
+      >
     </div>
   </SheetModal>
 </template>

@@ -2,6 +2,7 @@
 import type { Note } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
 import CriticalityPicker from '@/components/notes/CriticalityPicker.vue'
+import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 
 type Option = {
   value: Note['criticality']
@@ -27,7 +28,6 @@ type Props = {
   isSubmitEnabled: boolean
   options: readonly Option[]
   labels: Labels
-  styles: Record<string, string>
 }
 
 defineProps<Props>()
@@ -39,6 +39,8 @@ const emit = defineEmits<{
   (e: 'submit'): void
   (e: 'delete'): void
 }>()
+
+const styles = useShellOnlyStyles()
 
 function onBodyInput(event: Event): void {
   const target = event.target as HTMLTextAreaElement
@@ -72,7 +74,6 @@ function onBodyInput(event: Event): void {
       :model-value="criticality"
       :options="options"
       :label="labels.criticalityLabel"
-      :styles="styles"
       :id-prefix="isEdit ? 'edit' : 'create'"
       @update:model-value="emit('update:criticality', $event)"
     />

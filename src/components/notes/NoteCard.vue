@@ -21,6 +21,7 @@ const emit = defineEmits<{
 
 <template>
   <article
+    data-view-card
     :class="[styles.noteCard, { [styles.noteCardPinned]: note.isImportant }]"
     :style="{ backgroundColor }"
     @click="emit('edit', note)"
@@ -30,7 +31,7 @@ const emit = defineEmits<{
     </span>
     <p :class="styles.noteContent">{{ note.content }}</p>
 
-    <div :class="styles.noteActions">
+    <div :class="styles.cardActions">
       <button
         :class="[styles.cardAction, { [styles.cardActionActive]: note.isImportant }]"
         type="button"

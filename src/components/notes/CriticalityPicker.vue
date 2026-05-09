@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCssModule } from 'vue'
 import type { Note } from '@/types'
 
 type CriticalityValue = Note['criticality'] | ''
@@ -12,7 +13,6 @@ type Props = {
   modelValue: CriticalityValue
   options: readonly Option[]
   label: string
-  styles: Record<string, string>
   idPrefix?: string
 }
 
@@ -23,6 +23,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'update:modelValue', value: CriticalityValue): void
 }>()
+
+const styles = useCssModule()
 
 function select(value: Note['criticality']): void {
   emit('update:modelValue', value)
@@ -59,3 +61,5 @@ function select(value: Note['criticality']): void {
     </div>
   </div>
 </template>
+
+<style lang="scss" module src="./CriticalityPicker.module.scss"></style>

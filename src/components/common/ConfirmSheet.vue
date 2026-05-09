@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 
 type Props = {
   isOpen: boolean
@@ -7,7 +8,6 @@ type Props = {
   message: string
   cancelLabel: string
   confirmLabel: string
-  styles: Record<string, string>
 }
 
 defineProps<Props>()
@@ -17,6 +17,8 @@ const emit = defineEmits<{
   (e: 'cancel'): void
   (e: 'confirm'): void
 }>()
+
+const styles = useShellOnlyStyles()
 
 function cancel(): void {
   emit('cancel')

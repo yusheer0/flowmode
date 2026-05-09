@@ -1,0 +1,87 @@
+// Vault list chrome only. Shell: viewShell.module.scss
+
+.vaultView {
+  position: relative;
+  height: 100%;
+  background: var(--vs-page-bg);
+  overflow: hidden;
+  padding: 8px;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  padding: 12px 12px 72px;
+  overflow: auto;
+  background-color: var(--vs-canvas-bg);
+  border-radius: 24px;
+  corner-shape: squircle;
+}
+
+.listPane {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--vault-card-min-width, 300px), var(--vault-card-min-width, 300px)));
+  justify-content: start;
+  gap: 12px;
+  align-content: start;
+  min-height: min-content;
+}
+
+.virtualSpacer {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+  border-radius: 24px;
+  corner-shape: squircle;
+  padding: 24px;
+  padding-bottom: 44px;
+  background: var(--vs-view-card-bg);
+  color: var(--vs-view-card-fg);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--vs-view-card-shadow);
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  overflow: hidden;
+
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.cardTitle {
+  margin: 0;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--vs-view-card-title-divider);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.cardText {
+  margin: 0;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 500;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.emptyState {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--vs-empty-state-fg);
+  text-align: center;
+  padding: 24px;
+}

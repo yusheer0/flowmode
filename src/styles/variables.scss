@@ -32,6 +32,109 @@
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+
+  // Shared view UI (dock, bottom sheets, settings/search modals) — light
+  --vs-page-bg: #dcdcdc;
+  --vs-canvas-bg: #ffffff;
+  --vs-sheet-bg: #ffffff;
+  --vs-sheet-shadow: 0 14px 28px rgba(0, 0, 0, 0.2);
+  --vs-dock-bg: #dcdcdc;
+  --vs-heading: #1e1f24;
+  --vs-close-icon: #2c2d30;
+  --vs-close-hover-bg: #f0f0f3;
+  --vs-border: #d7d7dc;
+  --vs-border-focus: #8f8f98;
+  --vs-input-text: #1e1f24;
+  --vs-placeholder: #8a8a95;
+  --vs-muted: #575860;
+  --vs-search-wrap-text: #65656f;
+  --vs-settings-chip-bg: #f5f5f8;
+  --vs-settings-chip-border: #d7d7dc;
+  --vs-settings-chip-text: #1e1f24;
+  --vs-settings-chip-hover-border: #000000;
+  --vs-settings-active-bg: #000000;
+  --vs-settings-active-text: #ffffff;
+  --vs-cta-bg: #111318;
+  --vs-cta-border: #111318;
+  --vs-cta-text: #ffffff;
+  --vs-about-link-border: transparent;
+  --vs-about-link-bg: #f2f2f6;
+  --vs-about-link-text: #1e1f24;
+  --vs-about-link-hover: #e6e7ec;
+  --vs-layer-hint: #7a7b84;
+  --vs-dock-icon: #1e1e1f;
+  --vs-dock-hover: rgba(255, 255, 255, 0.45);
+  --vs-dock-active-bg: #0f1115;
+  --vs-dock-active-text: #ffffff;
+  --vs-card-action-bg: #c1c1c1;
+  --vs-card-action-icon: #000000;
+  --vs-card-action-active-bg: #6e6e73;
+  --vs-card-action-active-icon: #000000;
+  --vs-card-action-hover-bg: #000000;
+  --vs-card-action-hover-fg: #ffffff;
+  --vs-cancel-bg: #ffffff;
+  --vs-cancel-text: #1e1f24;
+  --vs-delete-bg: rgba(207, 34, 46, 0.77);
+  --vs-delete-text: #ffffff;
+  --vs-save-bg: rgba(34, 155, 68, 0.69);
+  --vs-save-text: #ffffff;
+  --vs-confirm-text: #575860;
+  --vs-body-muted: #575860;
+
+  // Canvas cards (glass tiles: Notes / Vault / Habits)
+  --vs-view-card-bg: rgba(104, 104, 104, 0.747);
+  --vs-view-card-fg: #ffffff;
+  --vs-view-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --vs-view-card-pin-shadow: 0 0 0 1px rgba(0, 0, 0, 0.26), 0 10px 26px rgba(0, 0, 0, 0.14);
+  --vs-view-card-title-divider: rgba(255, 255, 255, 0.3);
+
+  --vs-empty-state-fg: #8e8e96;
+
+  // Vault / Sheets — inline action strip next to inputs
+  --vs-field-inline-bg: var(--vs-settings-chip-bg);
+  --vs-field-inline-fg: var(--vs-input-text);
+
+  // Habits — completed card tint
+  --vs-habit-done-bg: rgba(26, 127, 55, 0.7);
+
+  // Notes — layer manager list
+  --vs-layer-list-item-bg: var(--vs-settings-chip-bg);
+  --vs-layer-list-item-hover-bg: transparent;
+  --vs-layer-list-item-active-fg: #ffffff;
+  --vs-layer-list-item-active-bg: #0f1115;
+  --vs-layer-list-item-active-border: #0f1115;
+
+  --vs-layer-delete-border: #efb0b0;
+  --vs-layer-delete-bg: #fff1f1;
+  --vs-layer-delete-fg: #b12525;
+  --vs-layer-delete-hover-bg: #ffe5e5;
+  --vs-layer-delete-hover-border: #e28f8f;
+
+  --vs-layer-create-cta-bg: #101217;
+  --vs-layer-create-cta-fg: #ffffff;
+
+  --vs-layer-status-bg: #000000;
+  --vs-layer-status-hover-bg: #131313;
+  --vs-layer-status-active-bg: #0f1115;
+  --vs-layer-status-fg: #ffffff;
+
+  // Notes — criticality picker
+  --vs-criticality-option-border: #626262;
+  --vs-criticality-option-fg: #626262;
+  --vs-criticality-option-focus-border: #8c8c94;
+  --vs-criticality-low-active-border: #5b89e7;
+  --vs-criticality-low-active-fg: #7b8fb8;
+  --vs-criticality-medium-active-border: #db9f4a;
+  --vs-criticality-medium-active-fg: #b89565;
+  --vs-criticality-high-active-border: #cc3030;
+  --vs-criticality-high-active-fg: #b96464;
+
+  // Notes — updater modal
+  --vs-update-progress-track: var(--vs-border);
+  --vs-update-progress-fill: var(--vs-cta-bg);
+  --vs-update-inline-status-fg: var(--vs-body-muted);
+  --vs-update-inline-success-fg: var(--color-success);
+  --vs-update-inline-error-fg: var(--color-danger);
 }
 
 [data-theme="dark"] {
@@ -57,4 +160,72 @@
   --shadow-sm: 0 0 transparent;
   --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  // Shared view UI — dark (dock, sheets, modals)
+  --vs-page-bg: #000000;
+  --vs-canvas-bg: #212121;
+  --vs-sheet-bg: #000000;
+  --vs-sheet-shadow: 0 -14px 28px rgba(0, 0, 0, 0.45);
+  --vs-dock-bg: #000000;
+  --vs-heading: #e6edf3;
+  --vs-close-icon: #e6edf3;
+  --vs-close-hover-bg: #21262d;
+  --vs-border: #30363d;
+  --vs-input-text: #e6edf3;
+  --vs-muted: #e6edf3;
+  --vs-placeholder: #8b949e;
+  --vs-search-wrap-text: #8b949e;
+  --vs-settings-chip-bg: transparent;
+  --vs-settings-chip-border: #ffffff;
+  --vs-settings-chip-text: #ffffff;
+  --vs-settings-chip-hover-border: #ffffff;
+  --vs-settings-active-bg: #ffffff;
+  --vs-settings-active-text: #0d1117;
+  --vs-cta-bg: #ffffff;
+  --vs-cta-border: #ffffff;
+  --vs-cta-text: #0d1117;
+  --vs-about-link-border: #30363d;
+  --vs-about-link-bg: #161b22;
+  --vs-about-link-text: #e6edf3;
+  --vs-about-link-hover: #1f2630;
+  --vs-layer-hint: #8b949e;
+  --vs-dock-icon: #e6edf3;
+  --vs-dock-hover: rgba(255, 255, 255, 0.1);
+  --vs-dock-active-bg: #0f1115;
+  --vs-dock-active-text: #ffffff;
+  --vs-card-action-hover-bg: #ffffff;
+  --vs-card-action-hover-fg: #000000;
+  --vs-cancel-bg: #0d1117;
+  --vs-cancel-text: #e6edf3;
+  --vs-confirm-text: #8b949e;
+  --vs-body-muted: #8b949e;
+
+  --vs-empty-state-fg: #8b949e;
+
+  --vs-view-card-title-divider: rgba(255, 255, 255, 0.24);
+
+  --vs-field-inline-bg: #0d1117;
+  --vs-field-inline-fg: #e6edf3;
+
+  --vs-habit-done-bg: rgba(26, 127, 55, 0.56);
+
+  --vs-layer-list-item-bg: #0d1117;
+  --vs-layer-list-item-hover-bg: #21262d;
+
+  --vs-layer-delete-border: #6a2d2d;
+  --vs-layer-delete-bg: #2e1111;
+  --vs-layer-delete-fg: #efaaaa;
+  --vs-layer-delete-hover-bg: #3a1616;
+  --vs-layer-delete-hover-border: #6a2d2d;
+
+  --vs-layer-status-bg: #212121;
+
+  --vs-criticality-option-border: #ffffff;
+  --vs-criticality-option-fg: #ffffff;
+
+  --vs-update-progress-track: #30363d;
+  --vs-update-progress-fill: #e6edf3;
+  --vs-update-inline-status-fg: #9da7b2;
+  --vs-update-inline-success-fg: #3fb950;
+  --vs-update-inline-error-fg: #ff7b72;
 }

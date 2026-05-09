@@ -1,0 +1,143 @@
+// Notes canvas + dock chrome only (no modal/sheet-specific rules)
+
+.notesView {
+  position: relative;
+  height: 100%;
+  background: var(--vs-page-bg);
+  overflow: hidden;
+  padding: 8px;
+}
+
+.canvas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 300px));
+  justify-content: start;
+  align-content: start;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  overflow: auto;
+  background-color: var(--vs-canvas-bg);
+  border-radius: 24px;
+  corner-shape: squircle;
+}
+
+.noteCard {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 220px;
+  border-radius: 24px;
+  corner-shape: squircle;
+  padding: 32px 24px;
+  padding-bottom: 44px;
+  background: var(--vs-view-card-bg);
+  color: var(--vs-view-card-fg);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--vs-view-card-shadow);
+  overflow: hidden;
+
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+.noteCardPinned {
+  box-shadow: var(--vs-view-card-pin-shadow);
+}
+
+.pinnedBadge {
+  position: absolute;
+  top: -12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--vs-view-card-fg);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.noteTitle {
+  margin: 0 0 10px;
+  width: 100%;
+  color: var(--color-text);
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.noteContent {
+  width: 100%;
+  min-height: 110px;
+  margin: 0;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  line-clamp: 8;
+  -webkit-line-clamp: 8;
+  -webkit-box-orient: vertical;
+}
+
+.emptyState {
+  color: var(--vs-empty-state-fg);
+  margin-top: 8px;
+}
+
+.layerStatusDock {
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 8px;
+  padding-bottom: 0;
+  border-radius: 14px;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  background: var(--vs-dock-bg);
+}
+
+.layerStatusWrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--vs-layer-status-bg);
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  color: var(--vs-layer-status-fg);
+  transition: background-color 0.18s ease;
+
+  &:hover {
+    background: var(--vs-layer-status-hover-bg);
+  }
+}
+
+.layerStatusWrapperActive {
+  background: var(--vs-layer-status-active-bg);
+}
+
+.layerStatusValue {
+  line-height: 1.2;
+  font-size: 18px;
+  font-weight: 500;
+  color: inherit;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

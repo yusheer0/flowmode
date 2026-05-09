@@ -1,0 +1,15 @@
+// Settings sheet — “check for updates” row (tokens in variables.scss)
+
+.updateInlineStatus {
+  margin: 0;
+  font-size: 13px;
+  color: var(--vs-update-inline-status-fg);
+}
+
+.updateInlineStatusSuccess {
+  color: var(--vs-update-inline-success-fg);
+}
+
+.updateInlineStatusError {
+  color: var(--vs-update-inline-error-fg);
+}

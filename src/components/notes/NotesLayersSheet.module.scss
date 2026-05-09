@@ -1,0 +1,117 @@
+// Layers bottom sheet (+ local layout). Shell classes from viewShell.module.scss merge.
+
+.layerSheet {
+  min-height: 220px;
+}
+
+.layerButtons {
+  display: grid;
+  gap: 10px;
+}
+
+.layerRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.layerOption {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--vs-border);
+  color: var(--vs-input-text);
+  background: var(--vs-layer-list-item-bg);
+  font-size: 16px;
+  letter-spacing: -0.5px;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+
+  &:hover {
+    border-color: var(--vs-settings-chip-hover-border);
+    background: var(--vs-layer-list-item-hover-bg);
+  }
+}
+
+.layerDeleteButton {
+  width: 48px;
+  min-height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--vs-layer-delete-border);
+  color: var(--vs-layer-delete-fg);
+  background: var(--vs-layer-delete-bg);
+  display: grid;
+  place-items: center;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+
+  &:hover {
+    background: var(--vs-layer-delete-hover-bg);
+    border-color: var(--vs-layer-delete-hover-border);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+.layerOptionActive {
+  color: var(--vs-layer-list-item-active-fg);
+  background: var(--vs-layer-list-item-active-bg);
+  border-color: var(--vs-layer-list-item-active-border);
+}
+
+.layerCreate {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.layerCreateLabel {
+  color: var(--vs-muted);
+  font-size: 16px;
+  letter-spacing: -0.5px;
+}
+
+.layerCreateControls {
+  display: flex;
+  gap: 8px;
+}
+
+.layerCreateInput {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--vs-border);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 16px;
+  letter-spacing: -0.5px;
+  color: var(--vs-input-text);
+  outline: none;
+  background: transparent;
+
+  &:focus {
+    border-color: var(--vs-border-focus);
+  }
+}
+
+.layerCreateButton {
+  min-width: 92px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--vs-layer-create-cta-bg);
+  color: var(--vs-layer-create-cta-fg);
+  padding: 0 16px;
+  font-size: 16px;
+  letter-spacing: -0.5px;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+.layerError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
