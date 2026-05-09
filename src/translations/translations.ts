@@ -1,6 +1,7 @@
 export const TRANSLATIONS = {
     ru: {
       close: 'Закрыть',
+      view: 'Вид',
       newNoteTitle: 'Новая заметка',
       editNoteTitle: 'Редактирование заметки',
       noteTitlePlaceholder: 'Заголовок',
@@ -110,6 +111,7 @@ export const TRANSLATIONS = {
     },
     en: {
       close: 'Close',
+      view: 'View',
       newNoteTitle: 'New Note',
       editNoteTitle: 'Edit Note',
       noteTitlePlaceholder: 'Title',

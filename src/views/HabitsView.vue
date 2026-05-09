@@ -253,10 +253,6 @@ onMounted(() => {
           </button>
         </div>
       </article>
-
-      <p v-if="!filteredHabits.length" :class="$style.emptyState">
-        {{ t('habitsEmptyState') }}
-      </p>
     </div>
 
     <SheetModal
@@ -442,7 +438,7 @@ onMounted(() => {
       :sheet-class="$style.modalSheet"
       :close-button-class="$style.modalClose"
       :title-class="$style.modalTitle"
-      title="View"
+      :title="t('view')"
       :close-title="t('close')"
       @close="closeViewPickerModal"
     >

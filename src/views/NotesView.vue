@@ -569,9 +569,9 @@ onBeforeUnmount(() => {
         </div>
         <div :class="$style.settingsGroup">
           <span :class="$style.settingsLabel">{{ t('updateSetting') }}</span>
-          <p :class="$style.updateMeta">
+          <!-- <p :class="$style.updateMeta">
             {{ t('updateCurrentVersion') }}: {{ appVersion || '—' }}
-          </p>
+          </p> -->
           <button
             type="button"
             :class="$style.updateButton"
@@ -743,7 +743,7 @@ onBeforeUnmount(() => {
       :sheet-class="$style.modalSheet"
       :close-button-class="$style.modalClose"
       :title-class="$style.modalTitle"
-      title="View"
+      :title="t('view')"
       :close-title="t('close')"
       @close="closeViewPickerModal"
     >

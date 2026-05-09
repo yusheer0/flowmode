@@ -65,6 +65,7 @@ function onBodyInput(event: Event): void {
       :placeholder="labels.bodyPlaceholder"
       autofocus
       @input="onBodyInput"
+      :resize="false"
     />
 
     <CriticalityPicker
