@@ -1,6 +1,6 @@
 {
   "name": "flowmode",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Flowmode - локальный ежедневник",
   "type": "module",
   "scripts": {
@@ -10,7 +10,9 @@
     "icons:generate": "tauri icon src-tauri/icons/app.svg",
     "tauri": "tauri",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sync-version": "node scripts/sync-version-from-package.mjs",
+    "release": "npm run sync-version && npm ci && npm run build && npm run tauri -- build"
   },
   "dependencies": {
     "@fontsource/bitter": "^5.2.10",
