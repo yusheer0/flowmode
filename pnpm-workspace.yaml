@@ -1,0 +1,8 @@
+packages:
+  - '.'
+
+# Explicit allowlist for dependency lifecycle scripts (required when strict-dep-builds is on; CI is non-interactive).
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  core-js: false
