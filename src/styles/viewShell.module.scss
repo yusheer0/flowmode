@@ -3,11 +3,11 @@
 
 .cardActions {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: 16px;
+  bottom: 16px;
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 6px;
   opacity: 0;
   transform: translateY(14px);
   pointer-events: none;
@@ -22,33 +22,21 @@
 
 .cardAction {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: var(--vs-card-action-icon);
-  background: var(--vs-card-action-bg);
   transition: background-color 0.4s ease, color 0.4s ease;
 
   svg {
-    width: 14px;
-    height: 14px;
+    width: 24px;
+    height: 24px;
   }
 
   &:hover {
-    background: var(--vs-card-action-hover-bg);
-    color: var(--vs-card-action-hover-fg);
-  }
-}
-
-.cardActionActive {
-  background: var(--vs-card-action-active-bg);
-  color: var(--vs-card-action-active-icon);
-
-  &:hover {
-    background: var(--vs-card-action-hover-bg);
     color: var(--vs-card-action-hover-fg);
   }
 }
@@ -79,7 +67,7 @@
 .modalSheet {
   position: relative;
   width: min(680px, 100%);
-  min-height: 162px;
+  min-height: 134px;
   max-height: 90vh;
   padding: 18px;
   border-radius: 32px 32px 0 0;
@@ -130,11 +118,12 @@
 
 .modalInput {
   width: 100%;
-  height: 40px;
+  height: 48px;
   border: 1px solid var(--vs-border);
   border-radius: 12px;
   padding: 0 12px;
   font-size: 16px;
+  letter-spacing: -0.5px;
   color: var(--vs-input-text);
   outline: none;
   background: transparent;
@@ -151,8 +140,9 @@
   border-radius: 12px;
   padding: 12px;
   resize: none;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.4;
+  letter-spacing: -0.5px;
   color: var(--vs-input-text);
   outline: none;
   background: transparent;
@@ -164,16 +154,6 @@
 
 .modalCreateButton {
   align-self: flex-end;
-  height: 40px;
-  border-radius: 10px;
-  padding: 0 18px;
-  color: var(--vs-cta-text);
-  background: var(--vs-cta-bg);
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
 }
 
 .editModalActions {
@@ -185,15 +165,21 @@
 .modalSaveButton,
 .modalDeleteButton,
 .modalCancelButton {
-  height: 46px;
+  height: 48px;
   border-radius: 10px;
   padding: 0 20px;
-  font-size: 14px;
+  font-size: 16px;
+  letter-spacing: -0.5px;
 }
 
 .modalSaveButton {
   color: var(--vs-save-text);
   background: var(--vs-save-bg);
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background: var(--vs-save-hover-bg);
+  }
 
   &:disabled {
     opacity: 0.45;
@@ -238,7 +224,7 @@
 }
 
 .searchSheet {
-  min-height: 150px;
+  min-height: 140px;
 }
 
 .settingsSheet {
@@ -246,7 +232,7 @@
 }
 
 .aboutSheet {
-  min-height: 180px;
+  min-height: 160px;
 }
 
 .searchField {
@@ -262,11 +248,14 @@
 }
 
 .searchInput {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   border: none;
   background: transparent;
   color: var(--vs-input-text);
-  font-size: 14px;
+  font-size: 16px;
+  letter-spacing: -0.5px;
   outline: none;
 
   &::placeholder {
@@ -274,9 +263,32 @@
   }
 }
 
+.searchClearButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -4px -2px -4px 4px;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vs-search-wrap-text);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--vs-input-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--vs-border-focus);
+    outline-offset: 2px;
+  }
+}
+
 .settingsGroup {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .settingsOptions {
@@ -312,7 +324,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
+  min-height: 54px;
   border: 1px solid var(--vs-settings-chip-border);
   border-radius: 12px;
   padding: 0 10px;
@@ -321,7 +333,7 @@
   color: var(--vs-settings-chip-text);
   background: var(--vs-settings-chip-bg);
   outline: none;
-  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+  transition: border-color 0.5s ease;
 
   &:hover {
     border-color: var(--vs-settings-chip-hover-border);
@@ -367,29 +379,8 @@
   margin: 0;
   color: var(--vs-body-muted);
   font-size: 16px;
-  line-height: 1;
-}
-
-.aboutGithubButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  min-width: 140px;
-  width: fit-content;
-  border: 1px solid var(--vs-about-link-border);
-  border-radius: 9px;
-  padding: 0 16px;
-  background: var(--vs-about-link-bg);
-  color: var(--vs-about-link-text);
-  font-size: 16px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.aboutGithubButton:hover {
-  background: var(--vs-about-link-hover);
+  line-height: 1.2;
+  margin-bottom: 12px;
 }
 
 .bottomDock {

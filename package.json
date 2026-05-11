@@ -1,7 +1,7 @@
 {
   "name": "flowmode",
-  "version": "0.3.3",
-  "description": "Flowmode - локальный ежедневник",
+  "version": "0.4.0",
+  "description": "Flowmode - локальный ежедневник, хранилище данных и организатор привычек",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
     "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "ant-design-vue": "4.2.6",
     "crypto-js": "^4.2.0",
     "lucide-vue-next": "^1.0.0",

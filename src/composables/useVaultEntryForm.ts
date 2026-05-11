@@ -19,6 +19,7 @@ export function useVaultEntryForm(vaultStore: VaultStoreApi) {
     username: '',
     password: '',
     url: '',
+    notes: '',
   })
 
   const hasPasswordValueForEdit = computed(() => form.value.password.length > 0 || editPasswordMask.value.length > 0)
@@ -37,7 +38,7 @@ export function useVaultEntryForm(vaultStore: VaultStoreApi) {
       username: form.value.username,
       password: form.value.password,
       url: form.value.url,
-      notes: '',
+      notes: form.value.notes,
       tags: [],
     }
   }
@@ -48,6 +49,7 @@ export function useVaultEntryForm(vaultStore: VaultStoreApi) {
       username: '',
       password: '',
       url: '',
+      notes: '',
     }
     editPasswordMask.value = ''
     isPasswordVisible.value = false
@@ -82,6 +84,7 @@ export function useVaultEntryForm(vaultStore: VaultStoreApi) {
       username: item.username,
       password: '',
       url: item.url || '',
+      notes: item.notes || '',
     }
     editPasswordMask.value = item.passwordMasked
     isPasswordVisible.value = false

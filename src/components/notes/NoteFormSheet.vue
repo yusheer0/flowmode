@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { Note } from '@/types'
+import type { Note, NoteCriticalitySelection } from '@/types'
 import SheetModal from '@/components/SheetModal.vue'
 import CriticalityPicker from '@/components/notes/CriticalityPicker.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 
 type Option = {
-  value: Note['criticality']
+  value: NonNullable<Note['criticality']>
   label: string
 }
 
@@ -24,7 +25,7 @@ type Props = {
   isOpen: boolean
   isEdit: boolean
   body: string
-  criticality: Note['criticality'] | ''
+  criticality: NoteCriticalitySelection
   isSubmitEnabled: boolean
   options: readonly Option[]
   labels: Labels
@@ -35,7 +36,7 @@ defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'update:body', value: string): void
-  (e: 'update:criticality', value: Note['criticality'] | ''): void
+  (e: 'update:criticality', value: NoteCriticalitySelection): void
   (e: 'submit'): void
   (e: 'delete'): void
 }>()
@@ -79,31 +80,26 @@ function onBodyInput(event: Event): void {
     />
 
     <div v-if="isEdit" :class="styles.editModalActions">
-      <button
-        :class="styles.modalDeleteButton"
-        type="button"
-        @click="emit('delete')"
-      >
+      <UiButton variant="delete" type="button" @click="emit('delete')">
         {{ labels.deleteButton }}
-      </button>
-      <button
-        :class="styles.modalSaveButton"
+      </UiButton>
+      <UiButton
+        variant="save"
         type="button"
         :disabled="!isSubmitEnabled"
         @click="emit('submit')"
       >
         {{ labels.saveButton }}
-      </button>
+      </UiButton>
     </div>
 
-    <button
+    <UiButton
       v-else
-      :class="styles.modalCreateButton"
       type="button"
       :disabled="!isSubmitEnabled"
       @click="emit('submit')"
     >
       {{ labels.createButton }}
-    </button>
+    </UiButton>
   </SheetModal>
 </template>

@@ -55,12 +55,13 @@
   --vs-settings-active-bg: #000000;
   --vs-settings-active-text: #ffffff;
   --vs-cta-bg: #111318;
+  --vs-cta-hover-bg: #444444;
   --vs-cta-border: #111318;
   --vs-cta-text: #ffffff;
   --vs-about-link-border: transparent;
   --vs-about-link-bg: #f2f2f6;
   --vs-about-link-text: #1e1f24;
-  --vs-about-link-hover: #e6e7ec;
+  --vs-about-link-hover: #bbbbbb;
   --vs-layer-hint: #7a7b84;
   --vs-dock-icon: #1e1e1f;
   --vs-dock-hover: rgba(255, 255, 255, 0.45);
@@ -75,14 +76,16 @@
   --vs-cancel-bg: #ffffff;
   --vs-cancel-text: #1e1f24;
   --vs-delete-bg: rgba(207, 34, 46, 0.77);
+  --vs-delete-border: #cf222e;
   --vs-delete-text: #ffffff;
   --vs-save-bg: rgba(34, 155, 68, 0.69);
+  --vs-save-hover-bg: rgba(12, 99, 37, 0.69);
   --vs-save-text: #ffffff;
   --vs-confirm-text: #575860;
   --vs-body-muted: #575860;
 
   // Canvas cards (glass tiles: Notes / Vault / Habits)
-  --vs-view-card-bg: rgba(104, 104, 104, 0.747);
+  --vs-view-card-bg: #8b8b8b4d;
   --vs-view-card-fg: #ffffff;
   --vs-view-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   --vs-view-card-pin-shadow: 0 0 0 1px rgba(0, 0, 0, 0.26), 0 10px 26px rgba(0, 0, 0, 0.14);

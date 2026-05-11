@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 import { useSettingsStore } from '@/stores'
 
@@ -66,7 +67,8 @@ function requestExport(): void {
     <div :class="styles.settingsGroup">
       <span :class="styles.settingsLabel">{{ labels.languageSetting }}</span>
       <div :class="styles.settingsOptions">
-        <button
+        <UiButton
+          variant="plain"
           type="button"
           :class="[
             styles.settingsOption,
@@ -75,8 +77,9 @@ function requestExport(): void {
           @click="updateLanguage('ru')"
         >
           Русский
-        </button>
-        <button
+        </UiButton>
+        <UiButton
+          variant="plain"
           type="button"
           :class="[
             styles.settingsOption,
@@ -85,13 +88,14 @@ function requestExport(): void {
           @click="updateLanguage('en')"
         >
           English
-        </button>
+        </UiButton>
       </div>
     </div>
     <div :class="styles.settingsGroup">
       <span :class="styles.settingsLabel">{{ labels.themeSetting }}</span>
       <div :class="styles.settingsOptions">
-        <button
+        <UiButton
+          variant="plain"
           type="button"
           :class="[
             styles.settingsOption,
@@ -100,8 +104,9 @@ function requestExport(): void {
           @click="updateTheme('light')"
         >
           {{ labels.themeLight }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
+          variant="plain"
           type="button"
           :class="[
             styles.settingsOption,
@@ -110,7 +115,7 @@ function requestExport(): void {
           @click="updateTheme('dark')"
         >
           {{ labels.themeDark }}
-        </button>
+        </UiButton>
       </div>
     </div>
     <div :class="styles.settingsGroup">
@@ -129,29 +134,28 @@ function requestExport(): void {
         >
           {{ labels.canvasBackgroundUploadButton }}
         </label>
-        <button
+        <UiButton
+          variant="plain"
           type="button"
           :class="styles.settingsOption"
           :disabled="!hasCanvasBackground"
           @click="clearCanvasBackground"
         >
           {{ labels.canvasBackgroundResetButton }}
-        </button>
+        </UiButton>
       </div>
-      <p v-if="hasCanvasBackground" :class="styles.layerHint">
-        {{ labels.canvasBackgroundApplied }}
-      </p>
     </div>
     <div :class="styles.settingsGroup">
       <span :class="styles.settingsLabel">{{ labels.exportDataSetting }}</span>
-      <button
+      <UiButton
+        variant="plain"
         type="button"
         :class="styles.updateButton"
         :disabled="isExporting"
         @click="requestExport"
       >
         {{ labels.exportDataButton }}
-      </button>
+      </UiButton>
     </div>
     <slot name="afterExport" />
   </SheetModal>

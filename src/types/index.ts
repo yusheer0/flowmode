@@ -95,6 +95,9 @@ export interface Note {
   deletedAt?: string
 }
 
+/** Criticality chosen in note forms; empty string means “not selected”. */
+export type NoteCriticalitySelection = NonNullable<Note['criticality']> | ''
+
 export type NoteSortOption = 'newest' | 'oldest' | 'important'
 export interface NotesLayer {
   id: string

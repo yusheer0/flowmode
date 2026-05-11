@@ -1,0 +1,17 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rootPlain {
+  display: contents;
+}
+
+.caption {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  color: var(--vs-muted);
+  padding-inline-start: 2px;
+}

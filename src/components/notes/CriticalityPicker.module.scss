@@ -1,4 +1,4 @@
-// Criticality control used inside NoteFormSheet
+// Label + layout for criticality field; segment buttons live in UiSegmentedChoice.
 
 .criticalityPicker {
   display: flex;
@@ -9,49 +9,4 @@
 .criticalityLabel {
   font-size: 13px;
   color: var(--vs-body-muted);
-}
-
-.criticalityOptions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.criticalityOption {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 48px;
-  border: 1px solid var(--vs-criticality-option-border);
-  border-radius: 12px;
-  padding: 0 10px;
-  font-size: 16px;
-  letter-spacing: -0.5px;
-  color: var(--vs-criticality-option-fg);
-  background: transparent;
-  outline: none;
-  transition: border-color 0.18s ease, color 0.18s ease;
-
-  &:focus {
-    border-color: var(--vs-criticality-option-focus-border);
-  }
-}
-
-.criticalityOptionActive {
-  background: transparent;
-}
-
-.criticalityOptionActive.criticalityOptionLow {
-  border-color: var(--vs-criticality-low-active-border);
-  color: var(--vs-criticality-low-active-fg);
-}
-
-.criticalityOptionActive.criticalityOptionMedium {
-  border-color: var(--vs-criticality-medium-active-border);
-  color: var(--vs-criticality-medium-active-fg);
-}
-
-.criticalityOptionActive.criticalityOptionHigh {
-  border-color: var(--vs-criticality-high-active-border);
-  color: var(--vs-criticality-high-active-fg);
 }

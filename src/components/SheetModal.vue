@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, watch } from 'vue'
 import { X } from 'lucide-vue-next'
+import UiButton from '@/components/ui/UiButton.vue'
 
 type ClassValue = string | string[] | Record<string, boolean> | undefined
 
@@ -69,8 +70,9 @@ onBeforeUnmount(() => {
   <transition :name="transitionName" :duration="500">
     <div v-if="isOpen" :class="overlayClass" @click.self="handleOverlayClick">
       <div :class="sheetClass">
-        <button
+        <UiButton
           v-if="showClose"
+          variant="plain"
           :class="closeButtonClass"
           type="button"
           :title="closeTitle"
@@ -78,7 +80,7 @@ onBeforeUnmount(() => {
           @click="requestClose"
         >
           <X :size="18" />
-        </button>
+        </UiButton>
 
         <h2 v-if="title" :class="titleClass">{{ title }}</h2>
         <slot />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2, UserRound, Link2 } from 'lucide-vue-next'
+import { Trash, UserRound, Link2 } from 'lucide-vue-next'
 import type { VaultItem } from '@/types'
 
 type Props = {
@@ -34,7 +34,7 @@ const emit = defineEmits<{
         :title="deleteTitle"
         @click.stop="emit('delete', item.id)"
       >
-        <Trash2 :size="14" />
+        <Trash :size="14" />
       </button>
     </div>
   </article>

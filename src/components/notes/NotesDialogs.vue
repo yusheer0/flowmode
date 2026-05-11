@@ -5,7 +5,7 @@ import SearchSheet from '@/components/common/SearchSheet.vue'
 import NoteFormSheet from '@/components/notes/NoteFormSheet.vue'
 import { useNotesSheets } from '@/composables/useNotesSheets'
 import { useNotesStore, useSettingsStore } from '@/stores'
-import type { Note } from '@/types'
+import type { Note, NoteCriticalitySelection } from '@/types'
 import { useAppUpdater } from '@/composables/useAppUpdater'
 import { useDataExport } from '@/composables/useDataExport'
 import { useCanvasBackground } from '@/composables/useCanvasBackground'
@@ -18,6 +18,7 @@ import AppSettingsSheet from '@/components/shell/AppSettingsSheet.vue'
 import AboutAppSheet from '@/components/shell/AboutAppSheet.vue'
 import AppUpdateSheet from '@/components/shell/AppUpdateSheet.vue'
 import NotesLayersSheet from '@/components/notes/NotesLayersSheet.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { NOTES_SHEETS_KEY } from '@/components/notes/notesInjection'
 
 const searchQuery = defineModel<string>('searchQuery', { required: true })
@@ -51,11 +52,11 @@ const {
 
 const isCreateModalOpen = ref(false)
 const newNoteBody = ref('')
-const selectedCreateCriticality = ref<Note['criticality'] | ''>('')
+const selectedCreateCriticality = ref<NoteCriticalitySelection>('')
 const isEditModalOpen = ref(false)
 const editNoteId = ref<string | null>(null)
 const editNoteBody = ref('')
-const editNoteCriticality = ref<Note['criticality'] | ''>('')
+const editNoteCriticality = ref<NoteCriticalitySelection>('')
 const isDeleteConfirmModalOpen = ref(false)
 const pendingDeleteNoteId = ref<string | null>(null)
 const pendingDeleteFromEditModal = ref(false)
@@ -210,7 +211,7 @@ function updateCreateBody(value: string): void {
   newNoteBody.value = value
 }
 
-function updateCreateCriticality(value: Note['criticality'] | ''): void {
+function updateCreateCriticality(value: NoteCriticalitySelection): void {
   selectedCreateCriticality.value = value
 }
 
@@ -218,7 +219,7 @@ function updateEditBody(value: string): void {
   editNoteBody.value = value
 }
 
-function updateEditCriticality(value: Note['criticality'] | ''): void {
+function updateEditCriticality(value: NoteCriticalitySelection): void {
   editNoteCriticality.value = value
 }
 
@@ -317,6 +318,7 @@ defineExpose({
     :is-open="isSearchModalOpen"
     :title="t('searchTitle')"
     :close-title="t('close')"
+    :clear-title="t('searchClearTitle')"
     :placeholder="t('searchPlaceholder')"
     :model-value="searchQuery"
     @close="closeSearchModal"
@@ -350,14 +352,15 @@ defineExpose({
     <template #afterExport>
       <div :class="dlgStyles.settingsGroup">
         <span :class="dlgStyles.settingsLabel">{{ t('updateSetting') }}</span>
-        <button
+        <UiButton
+          variant="plain"
           type="button"
           :class="dlgStyles.updateButton"
           :disabled="isCheckingUpdates || isInstallingUpdate"
           @click="checkAndInstallUpdate"
         >
           {{ t('updateNowButton') }}
-        </button>
+        </UiButton>
         <p
           v-if="settingsUpdateMessage"
           :class="[

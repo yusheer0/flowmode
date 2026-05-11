@@ -1,0 +1,59 @@
+// Vault entry inputs (merged over viewShell.modal*).
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inputInlineAction {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0;
+}
+
+.inlineRowPrimaryInput {
+  height: 48px;
+  padding-right: 12px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.fieldInlineButtons {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.fieldInlineButton {
+  min-width: 76px;
+  height: 48px;
+  border: 1px solid var(--vs-border);
+  border-left: 0;
+  border-radius: 0;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  background: var(--vs-field-inline-bg);
+  color: var(--vs-field-inline-fg);
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+.fieldInlineButtons .fieldInlineButton + .fieldInlineButton {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-left: 1px solid var(--vs-border);
+}
+
+.fieldInlineButtons .fieldInlineButton:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.descriptionTextarea {
+  min-height: 72px;
+  height: auto;
+  padding: 10px 12px;
+  line-height: 1.4;
+  resize: none;
+}

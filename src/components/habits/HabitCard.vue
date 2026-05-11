@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Trash2 } from 'lucide-vue-next'
+import { SquareCheck, Trash } from 'lucide-vue-next'
 import type { Habit } from '@/types'
 
 type Props = {
@@ -30,7 +30,7 @@ const emit = defineEmits<{
         :class="[styles.cardAction, { [styles.cardActionActive]: isDoneToday }]"
         @click="emit('toggle-done', habit.id)"
       >
-        <Check :size="14" />
+        <SquareCheck :size="14" />
       </button>
 
       <button
@@ -39,7 +39,7 @@ const emit = defineEmits<{
         :title="deleteTitle"
         @click="emit('request-delete', habit.id)"
       >
-        <Trash2 :size="14" />
+        <Trash :size="14" />
       </button>
     </div>
   </article>

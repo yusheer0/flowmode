@@ -10,6 +10,7 @@ export function useVaultListFilter(items: Ref<VaultItem[]>, searchQuery: Ref<str
       const username = normalizeSearchValue(item.username)
       const service = normalizeSearchValue(item.service)
       const url = normalizeSearchValue(item.url)
+      const notes = normalizeSearchValue(item.notes)
 
       return (
         !query
@@ -17,6 +18,7 @@ export function useVaultListFilter(items: Ref<VaultItem[]>, searchQuery: Ref<str
         || username.includes(query)
         || service.includes(query)
         || url.includes(query)
+        || notes.includes(query)
       )
     })
   })

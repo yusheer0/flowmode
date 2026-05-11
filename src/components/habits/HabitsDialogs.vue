@@ -13,6 +13,7 @@ import { useSettingsStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 import { HABITS_TRACKER_KEY } from '@/components/habits/habitsInjection'
+import UiButton from '@/components/ui/UiButton.vue'
 
 const searchQuery = defineModel<string>('searchQuery', { required: true })
 
@@ -156,13 +157,14 @@ defineExpose({
         :class="styles.modalInput"
         :placeholder="t('habitsAddPlaceholder')"
       />
-      <button
+      <UiButton
         type="submit"
+        variant="cta"
         :class="styles.modalCreateButton"
         :disabled="newHabitName.length === 0"
       >
         {{ t('habitsAddButton') }}
-      </button>
+      </UiButton>
     </form>
   </SheetModal>
 
@@ -181,6 +183,7 @@ defineExpose({
     :is-open="isSearchModalOpen"
     :title="t('searchTitle')"
     :close-title="t('close')"
+    :clear-title="t('searchClearTitle')"
     :placeholder="t('searchPlaceholder')"
     :model-value="searchQuery"
     @close="closeSearchModal"

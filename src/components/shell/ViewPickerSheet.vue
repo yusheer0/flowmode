@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 import type { ActiveAppView } from '@/composables/useViewNavigation'
 
@@ -40,27 +41,30 @@ const emit = defineEmits<{
   >
     <div :class="styles.settingsGroup">
       <div :class="styles.settingsOptions">
-        <button
+        <UiButton
+          variant="plain"
           :class="[styles.settingsOption, { [styles.settingsOptionActive]: activeView === 'notes' }]"
           type="button"
           @click="emit('select', 'notes')"
         >
           {{ labels.notesViewTitle }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
+          variant="plain"
           :class="[styles.settingsOption, { [styles.settingsOptionActive]: activeView === 'vault' }]"
           type="button"
           @click="emit('select', 'vault')"
         >
           {{ labels.vaultViewTitle }}
-        </button>
-        <button
+        </UiButton>
+        <UiButton
+          variant="plain"
           :class="[styles.settingsOption, { [styles.settingsOptionActive]: activeView === 'habits' }]"
           type="button"
           @click="emit('select', 'habits')"
         >
           {{ labels.habitsViewTitle }}
-        </button>
+        </UiButton>
       </div>
     </div>
   </SheetModal>

@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiVaultEntryFields from '@/components/ui/UiVaultEntryFields.vue'
 import { useMergedShellStyles } from '@/composables/useMergedShellStyles'
 
 type Labels = {
   createTitle: string
   editTitle: string
   close: string
+  titleLabel: string
+  usernameLabel: string
+  passwordLabel: string
+  descriptionLabel: string
+  urlLabel: string
   titlePlaceholder: string
   usernamePlaceholder: string
   passwordPlaceholder: string
+  descriptionPlaceholder: string
   urlPlaceholder: string
   copy: string
   copied: string
@@ -24,6 +32,7 @@ type Props = {
   titleValue: string
   usernameValue: string
   passwordValue: string
+  notesValue: string
   urlValue: string
   isPasswordVisible: boolean
   editPasswordMask: string
@@ -43,6 +52,7 @@ const emit = defineEmits<{
   (e: 'update:title', value: string): void
   (e: 'update:username', value: string): void
   (e: 'update:password', value: string): void
+  (e: 'update:notes', value: string): void
   (e: 'update:url', value: string): void
   (e: 'password-input'): void
   (e: 'toggle-password'): void
@@ -50,26 +60,6 @@ const emit = defineEmits<{
   (e: 'copy-password'): void
   (e: 'open-url', value: string): void
 }>()
-
-function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 'url'): void {
-  const target = event.target as HTMLInputElement
-  const value = field === 'password' ? target.value : target.value.trim()
-
-  switch (field) {
-    case 'title':
-      emit('update:title', value)
-      break
-    case 'username':
-      emit('update:username', value)
-      break
-    case 'password':
-      emit('update:password', value)
-      break
-    case 'url':
-      emit('update:url', value)
-      break
-  }
-}
 </script>
 
 <template>
@@ -85,81 +75,36 @@ function onFieldUpdate(event: Event, field: 'title' | 'username' | 'password' | 
     :close-on-overlay="false"
     @close="emit('close')"
   >
-    <input
-      :value="titleValue"
-      :class="styles.modalInput"
-      :placeholder="labels.titlePlaceholder"
-      @input="onFieldUpdate($event, 'title')"
-    />
-    <div :class="styles.inputInlineAction">
-      <input
-        :value="usernameValue"
-        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
-        :placeholder="labels.usernamePlaceholder"
-        @input="onFieldUpdate($event, 'username')"
+    <div :class="styles.modalContent">
+      <UiVaultEntryFields
+        :title-value="titleValue"
+        :username-value="usernameValue"
+        :password-value="passwordValue"
+        :notes-value="notesValue"
+        :url-value="urlValue"
+        :is-password-visible="isPasswordVisible"
+        :edit-password-mask="editPasswordMask"
+        :is-login-copied="isLoginCopied"
+        :is-password-copied="isPasswordCopied"
+        :is-editing="isEditing"
+        :labels="labels"
+        @update:title="emit('update:title', $event)"
+        @update:username="emit('update:username', $event)"
+        @update:password="emit('update:password', $event)"
+        @update:notes="emit('update:notes', $event)"
+        @update:url="emit('update:url', $event)"
+        @password-input="emit('password-input')"
+        @toggle-password="emit('toggle-password')"
+        @copy-login="emit('copy-login')"
+        @copy-password="emit('copy-password')"
+        @open-url="emit('open-url', $event)"
       />
-      <button
-        v-if="isEditing"
-        :class="styles.fieldInlineButton"
-        type="button"
-        :title="isLoginCopied ? labels.copied : labels.copy"
-        @click="emit('copy-login')"
-      >
-        {{ isLoginCopied ? labels.copied : labels.copy }}
-      </button>
-    </div>
-    <div :class="styles.inputInlineAction">
-      <input
-        :value="passwordValue"
-        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
-        :type="isPasswordVisible ? 'text' : 'password'"
-        :placeholder="isEditing ? editPasswordMask || labels.passwordPlaceholder : labels.passwordPlaceholder"
-        @input="
-          onFieldUpdate($event, 'password');
-          emit('password-input')
-        "
-      />
-      <div v-if="isEditing" :class="styles.fieldInlineButtons">
-        <button
-          :class="styles.fieldInlineButton"
-          type="button"
-          :title="isPasswordVisible ? labels.hide : labels.reveal"
-          @click="emit('toggle-password')"
-        >
-          {{ isPasswordVisible ? labels.hide : labels.reveal }}
-        </button>
-        <button
-          :class="styles.fieldInlineButton"
-          type="button"
-          :title="isPasswordCopied ? labels.copied : labels.copy"
-          @click="emit('copy-password')"
-        >
-          {{ isPasswordCopied ? labels.copied : labels.copy }}
-        </button>
-      </div>
-    </div>
-    <div :class="styles.inputInlineAction">
-      <input
-        :value="urlValue"
-        :class="[styles.modalInput, styles.inlineRowPrimaryInput]"
-        :placeholder="labels.urlPlaceholder"
-        @input="onFieldUpdate($event, 'url')"
-      />
-      <button
-        v-if="isEditing && urlValue.trim().length > 0"
-        :class="styles.fieldInlineButton"
-        type="button"
-        :title="labels.goToUrl"
-        @click="emit('open-url', urlValue)"
-      >
-        {{ labels.goToUrl }}
-      </button>
-    </div>
 
-    <div :class="styles.modalActions">
-      <button :class="styles.modalSaveButton" type="button" :disabled="!canSave" @click="emit('save')">
-        {{ labels.save }}
-      </button>
+      <div :class="styles.modalActions">
+        <UiButton variant="save" :disabled="!canSave" @click="emit('save')">
+          {{ labels.save }}
+        </UiButton>
+      </div>
     </div>
   </SheetModal>
 </template>

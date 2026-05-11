@@ -14,6 +14,7 @@ import { useViewNavigation } from '@/composables/useViewNavigation'
 import { useSettingsStore, useVaultStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import type { VaultItem } from '@/types'
+import { openExternalUrl } from '@/utils/openExternalUrl'
 import { normalizeUrl } from '@/utils/vault'
 
 const searchQuery = defineModel<string>('searchQuery', { required: true })
@@ -69,9 +70,15 @@ const entryLabels = computed(() => ({
   createTitle: t('createTitle'),
   editTitle: t('editTitle'),
   close: t('close'),
+  titleLabel: t('titlePlaceholder'),
+  usernameLabel: t('loginLabel'),
+  passwordLabel: t('passwordLabel'),
+  descriptionLabel: t('vaultDescriptionLabel'),
+  urlLabel: t('urlFieldLabel'),
   titlePlaceholder: t('titlePlaceholder'),
   usernamePlaceholder: t('usernamePlaceholder'),
   passwordPlaceholder: t('passwordPlaceholder'),
+  descriptionPlaceholder: t('vaultDescriptionPlaceholder'),
   urlPlaceholder: t('urlPlaceholder'),
   copy: t('copy'),
   copied: t('copied'),
@@ -167,11 +174,11 @@ async function copyEditingPassword(): Promise<void> {
   await copyPassword(editingId.value)
 }
 
-function openUrl(raw?: string): void {
+async function openUrl(raw?: string): Promise<void> {
   if (!raw) return
   const normalized = normalizeUrl(raw.trim())
   if (!normalized) return
-  window.open(normalized, '_blank', 'noopener,noreferrer')
+  await openExternalUrl(normalized)
 }
 
 function closeDeleteConfirmModal(): void {
@@ -183,6 +190,26 @@ async function confirmDelete(): Promise<void> {
   if (!pendingDeleteItemId.value) return
   await vaultStore.deleteItem(pendingDeleteItemId.value)
   closeDeleteConfirmModal()
+}
+
+function setFormTitle(value: string): void {
+  form.value.title = value
+}
+
+function setFormUsername(value: string): void {
+  form.value.username = value
+}
+
+function setFormPassword(value: string): void {
+  form.value.password = value
+}
+
+function setFormNotes(value: string): void {
+  form.value.notes = value
+}
+
+function setFormUrl(value: string): void {
+  form.value.url = value
 }
 
 onBeforeUnmount(() => {
@@ -213,6 +240,7 @@ defineExpose({
     :title-value="form.title"
     :username-value="form.username"
     :password-value="form.password"
+    :notes-value="form.notes"
     :url-value="form.url"
     :is-password-visible="isPasswordVisible"
     :edit-password-mask="editPasswordMask"
@@ -222,10 +250,11 @@ defineExpose({
     :labels="entryLabels"
     @close="closeFormModal"
     @save="saveForm"
-    @update:title="(value) => (form.title = value)"
-    @update:username="(value) => (form.username = value)"
-    @update:password="(value) => (form.password = value)"
-    @update:url="(value) => (form.url = value)"
+    @update:title="setFormTitle"
+    @update:username="setFormUsername"
+    @update:password="setFormPassword"
+    @update:notes="setFormNotes"
+    @update:url="setFormUrl"
     @password-input="handlePasswordInput"
     @toggle-password="togglePasswordVisibility"
     @copy-login="copyEditingLogin"
@@ -248,6 +277,7 @@ defineExpose({
     :is-open="isSearchModalOpen"
     :title="t('searchTitle')"
     :close-title="t('close')"
+    :clear-title="t('searchClearTitle')"
     :placeholder="t('searchPlaceholder')"
     :model-value="searchQuery"
     @close="closeSearchModal"

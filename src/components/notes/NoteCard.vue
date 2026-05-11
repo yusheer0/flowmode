@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Bookmark, Heart, Trash2 } from 'lucide-vue-next'
+import { ref, watch } from 'vue'
+import { Bookmark, Star, Trash } from 'lucide-vue-next'
 import type { Note } from '@/types'
 
 type Props = {
@@ -10,7 +11,22 @@ type Props = {
   styles: Record<string, string>
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const pinEnterActive = ref(false)
+const PIN_ENTER_MS = 580
+
+watch(
+  () => props.note.isImportant,
+  (isImportant, wasImportant) => {
+    if (isImportant && wasImportant === false) {
+      pinEnterActive.value = true
+      window.setTimeout(() => {
+        pinEnterActive.value = false
+      }, PIN_ENTER_MS)
+    }
+  },
+)
 
 const emit = defineEmits<{
   (e: 'edit', note: Note): void
@@ -22,7 +38,10 @@ const emit = defineEmits<{
 <template>
   <article
     data-view-card
-    :class="[styles.noteCard, { [styles.noteCardPinned]: note.isImportant }]"
+    :class="[
+      styles.noteCard,
+      { [styles.noteCardPinned]: note.isImportant, [styles.noteCardPinEnter]: pinEnterActive },
+    ]"
     :style="{ backgroundColor }"
     @click="emit('edit', note)"
   >
@@ -38,7 +57,7 @@ const emit = defineEmits<{
         :title="pinTitle"
         @click.stop="emit('toggle-important', note.id)"
       >
-        <Heart :size="14" />
+        <Star :size="14" />
       </button>
       <button
         :class="styles.cardAction"
@@ -46,7 +65,7 @@ const emit = defineEmits<{
         :title="deleteTitle"
         @click.stop="emit('delete', note.id)"
       >
-        <Trash2 :size="14" />
+        <Trash :size="14" />
       </button>
     </div>
   </article>

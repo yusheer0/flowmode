@@ -3,6 +3,7 @@ import { computed, inject } from 'vue'
 import { X } from 'lucide-vue-next'
 import ConfirmSheet from '@/components/common/ConfirmSheet.vue'
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useNotesStore, useSettingsStore } from '@/stores'
 import { useNotesLayers } from '@/composables/useNotesLayers'
 import { TRANSLATIONS } from '@/translations/translations'
@@ -82,7 +83,8 @@ defineExpose({
         :key="layer.id"
       >
         <div :class="styles.layerRow">
-          <button
+          <UiButton
+            variant="plain"
             :class="[
               styles.layerOption,
               { [styles.layerOptionActive]: layer.id === notesStore.activeLayerId },
@@ -91,8 +93,9 @@ defineExpose({
             @click="selectLayer(layer.id)"
           >
             {{ layer.name }}
-          </button>
-          <button
+          </UiButton>
+          <UiButton
+            variant="plain"
             :class="styles.layerDeleteButton"
             type="button"
             :title="labels.deleteLayerTitle"
@@ -100,7 +103,7 @@ defineExpose({
             @click="deleteLayer(layer.id)"
           >
             <X :size="18" />
-          </button>
+          </UiButton>
         </div>
       </div>
     </div>
@@ -119,14 +122,15 @@ defineExpose({
           @input="onLayerNameInput"
           @keydown.enter.prevent="createLayer"
         >
-        <button
+        <UiButton
+          variant="plain"
           :class="styles.layerCreateButton"
           type="button"
           :disabled="!canSubmitLayer"
           @click="createLayer"
         >
           {{ labels.createLayerButton }}
-        </button>
+        </UiButton>
       </div>
       <p v-if="!canCreateCustomLayer" :class="styles.layerHint">
         {{ labels.customLayerLimitReached }}

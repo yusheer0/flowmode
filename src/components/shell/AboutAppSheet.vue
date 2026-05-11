@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useMergedShellStyles } from '@/composables/useMergedShellStyles'
+import { openExternalUrl } from '@/utils/openExternalUrl'
 
 export type AboutAppSheetLabels = {
   aboutTitle: string
@@ -17,7 +19,11 @@ type Props = {
   versionLine?: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+async function openGithub(): Promise<void> {
+  await openExternalUrl(props.githubUrl)
+}
 
 const emit = defineEmits<{
   close: []
@@ -38,16 +44,11 @@ const styles = useMergedShellStyles()
     @close="emit('close')"
   >
     <div :class="styles.aboutContent">
-      <p v-if="versionLine" :class="styles.aboutMeta">{{ versionLine }}</p>
       <p :class="styles.aboutDescription">{{ labels.aboutDescription }}</p>
-      <a
-        :class="styles.aboutGithubButton"
-        :href="githubUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <p v-if="versionLine" :class="styles.aboutMeta">{{ versionLine }}</p>
+      <UiButton variant="about" type="button" @click="openGithub">
         {{ labels.aboutGithubButton }}
-      </a>
+      </UiButton>
     </div>
   </SheetModal>
 </template>

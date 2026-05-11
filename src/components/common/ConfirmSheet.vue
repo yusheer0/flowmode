@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SheetModal from '@/components/SheetModal.vue'
+import UiButton from '@/components/ui/UiButton.vue'
 import { useShellOnlyStyles } from '@/composables/useShellOnlyStyles'
 
 type Props = {
@@ -37,12 +38,12 @@ function cancel(): void {
   >
     <p :class="styles.confirmMessage">{{ message }}</p>
     <div :class="styles.confirmActions">
-      <button :class="styles.modalCancelButton" type="button" @click="cancel">
+      <UiButton variant="plain" :class="styles.modalCancelButton" type="button" @click="cancel">
         {{ cancelLabel }}
-      </button>
-      <button :class="styles.modalDeleteButton" type="button" @click="emit('confirm')">
+      </UiButton>
+      <UiButton variant="plain" :class="styles.modalDeleteButton" type="button" @click="emit('confirm')">
         {{ confirmLabel }}
-      </button>
+      </UiButton>
     </div>
   </SheetModal>
 </template>

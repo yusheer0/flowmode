@@ -1,61 +1,7 @@
-// Vault entry form tweaks (merged over viewShell.modal* / .modalInput).
-
-.inputInlineAction {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0;
-}
-
-.inlineRowPrimaryInput {
-  padding-right: 12px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.fieldInlineButtons {
-  display: inline-flex;
-  align-items: stretch;
-}
-
-.fieldInlineButton {
-  min-width: 76px;
-  height: 40px;
-  border: 1px solid var(--vs-border);
-  border-left: 0;
-  border-radius: 0;
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-  background: var(--vs-field-inline-bg);
-  color: var(--vs-field-inline-fg);
-  font-size: 12px;
-  padding: 0 10px;
-}
-
-.fieldInlineButtons .fieldInlineButton + .fieldInlineButton {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-left: 1px solid var(--vs-border);
-}
-
-.fieldInlineButtons .fieldInlineButton:last-child {
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
+// Vault entry sheet tweaks (merged over viewShell).
 
 .modalActions {
   align-self: flex-end;
   display: flex;
   gap: 8px;
-}
-
-.modalSaveButton {
-  color: var(--vs-view-card-fg);
-  background: var(--color-success);
-  opacity: 0.92;
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: default;
-  }
 }
