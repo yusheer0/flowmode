@@ -116,7 +116,9 @@ fn next_vault_sort_order(connection: &Connection) -> Result<i64, String> {
         return Ok(0);
     }
     connection
-        .query_row("SELECT MIN(sort_order) FROM vault_items", [], |row| row.get(0))
+        .query_row("SELECT MIN(sort_order) FROM vault_items", [], |row| {
+            row.get(0)
+        })
         .map_err(|error| format!("Ошибка чтения MIN(sort_order): {}", error))
         .map(|min_sort: i64| min_sort - 1)
 }
