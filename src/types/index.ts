@@ -93,6 +93,8 @@ export interface Note {
   updatedAt: string
   isImportant?: boolean
   deletedAt?: string
+  /** Порядок внутри слоя среди заметок с тем же `isImportant` (меньше — выше в списке). */
+  manualOrder?: number
 }
 
 /** Criticality chosen in note forms; empty string means “not selected”. */
@@ -132,6 +134,7 @@ export interface VaultItem {
   tags: string[]
   createdAt: string
   updatedAt: string
+  sortOrder?: number
 }
 
 export interface VaultItemInput {

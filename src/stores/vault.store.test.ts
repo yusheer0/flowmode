@@ -31,6 +31,7 @@ describe('useVaultStore', () => {
           tags: ['dev'],
           createdAt: '100',
           updatedAt: '100',
+          sortOrder: 0,
         }]
       }
       if (command === 'vault_list_events') {
@@ -64,6 +65,7 @@ describe('useVaultStore', () => {
           tags: [],
           createdAt: '100',
           updatedAt: '100',
+          sortOrder: 0,
         }]
       }
       if (command === 'vault_list_events') return []

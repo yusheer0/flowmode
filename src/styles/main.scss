@@ -52,3 +52,7 @@ ul, ol {
   font-style: normal;
   font-display: swap; /* Optional: improves loading perception */
 }
+
+html.fm-dnd-active [data-view-card] :is(button, a, input, textarea) {
+  pointer-events: none;
+}

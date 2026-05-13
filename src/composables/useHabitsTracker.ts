@@ -83,6 +83,18 @@ export function useHabitsTracker() {
     saveHabits()
   }
 
+  function reorderHabits(orderedIds: string[]): void {
+    const idSet = new Set(habits.value.map(h => h.id))
+    if (orderedIds.length !== idSet.size) return
+    for (const id of orderedIds) {
+      if (!idSet.has(id)) return
+    }
+    habits.value = orderedIds
+      .map(id => habits.value.find(h => h.id === id))
+      .filter((h): h is Habit => h !== undefined)
+    saveHabits()
+  }
+
   return {
     habits,
     today,
@@ -92,5 +104,6 @@ export function useHabitsTracker() {
     tryCreateHabit,
     toggleHabitDone,
     deleteHabit,
+    reorderHabits,
   }
 }

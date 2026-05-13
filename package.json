@@ -1,13 +1,13 @@
 {
   "name": "flowmode",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Flowmode - локальный ежедневник, хранилище данных и организатор привычек",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "icons:generate": "tauri icon src-tauri/icons/app.svg",
+    "icons:generate": "tauri icon src-tauri/icons/icon.png -o src-tauri/icons",
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",

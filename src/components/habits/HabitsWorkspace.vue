@@ -8,6 +8,7 @@ import { useCanvasBackground } from '@/composables/useCanvasBackground'
 import { useSettingsStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import { useViewPageStyles } from '@/composables/useViewPageStyles'
+import { useListDragReorder } from '@/composables/useListDragReorder'
 import { HABITS_TRACKER_KEY } from '@/components/habits/habitsInjection'
 
 const styles = useViewPageStyles()
@@ -17,7 +18,7 @@ const dialogsRef = ref<InstanceType<typeof HabitsDialogs> | null>(null)
 const tracker = useHabitsTracker()
 provide(HABITS_TRACKER_KEY, tracker)
 
-const { habits, loadHabits, isHabitDoneToday, toggleHabitDone } = tracker
+const { habits, loadHabits, isHabitDoneToday, toggleHabitDone, reorderHabits } = tracker
 
 const searchQuery = ref('')
 
@@ -27,6 +28,33 @@ const filteredHabits = computed(() => {
   if (!query) return habits.value
   return habits.value.filter((habit) => habit.name.toLowerCase().includes(query))
 })
+
+const reorderEnabled = computed(() => normalizedSearchQuery.value.length === 0)
+
+const listDrag = useListDragReorder({
+  enabled: reorderEnabled,
+  canDrop: () => true,
+  onReorder: (draggedId, targetId, placeBefore) => {
+    const order = filteredHabits.value.map(h => h.id)
+    const next = order.filter(id => id !== draggedId)
+    const targetIndexInNext = next.indexOf(targetId)
+    if (targetIndexInNext === -1) return
+    const insertAt = placeBefore ? targetIndexInNext : targetIndexInNext + 1
+    next.splice(insertAt, 0, draggedId)
+    reorderHabits(next)
+  },
+})
+
+const {
+  draggingId,
+  dragOverId,
+  isDragOverBefore,
+  onHandleDragStart,
+  onCardDragOver,
+  onCardDragLeave,
+  onCardDrop,
+  onDragEnd,
+} = listDrag
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
@@ -49,8 +77,18 @@ onMounted(() => {
         :styles="styles"
         :is-done-today="isHabitDoneToday(habit)"
         :delete-title="t('habitsDeleteTitle')"
+        :reorder-enabled="reorderEnabled"
+        :drag-handle-title="t('dragToReorderTitle')"
+        :is-dragging="draggingId === habit.id"
+        :is-drop-target="dragOverId === habit.id"
+        :drop-before="isDragOverBefore"
         @toggle-done="toggleHabitDone"
         @request-delete="(id) => dialogsRef?.promptDeleteHabit(id)"
+        @drag-handle-start="(e) => onHandleDragStart(e, habit.id)"
+        @card-drag-over="(e) => onCardDragOver(e, habit.id)"
+        @card-drag-leave="(e) => onCardDragLeave(e, habit.id)"
+        @card-drop="(e) => onCardDrop(e, habit.id)"
+        @card-drag-end="onDragEnd"
       />
     </div>
 

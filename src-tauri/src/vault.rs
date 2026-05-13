@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rand::seq::SliceRandom;
@@ -39,6 +40,7 @@ struct VaultStoredItem {
     tags: Vec<String>,
     created_at: String,
     updated_at: String,
+    sort_order: i64,
 }
 
 /// Vault list item
@@ -55,6 +57,7 @@ pub struct VaultListItem {
     tags: Vec<String>,
     created_at: String,
     updated_at: String,
+    sort_order: i64,
 }
 
 /// Vault item input
@@ -101,7 +104,21 @@ fn to_vault_list_item(item: &VaultStoredItem) -> VaultListItem {
         tags: item.tags.clone(),
         created_at: item.created_at.clone(),
         updated_at: item.updated_at.clone(),
+        sort_order: item.sort_order,
     }
+}
+
+fn next_vault_sort_order(connection: &Connection) -> Result<i64, String> {
+    let count: i64 = connection
+        .query_row("SELECT COUNT(*) FROM vault_items", [], |row| row.get(0))
+        .map_err(|error| format!("Ошибка подсчёта vault_items: {}", error))?;
+    if count == 0 {
+        return Ok(0);
+    }
+    connection
+        .query_row("SELECT MIN(sort_order) FROM vault_items", [], |row| row.get(0))
+        .map_err(|error| format!("Ошибка чтения MIN(sort_order): {}", error))
+        .map(|min_sort: i64| min_sort - 1)
 }
 
 /// Load vault list items from the database
@@ -109,9 +126,9 @@ fn load_vault_list_items(connection: &Connection) -> Result<Vec<VaultListItem>, 
     let mut statement = connection
         .prepare(
             r#"
-            SELECT id, title, service, username, url, notes, tags_json, created_at, updated_at
+            SELECT id, title, service, username, url, notes, tags_json, created_at, updated_at, sort_order
             FROM vault_items
-            ORDER BY updated_at DESC
+            ORDER BY sort_order ASC, updated_at DESC
             "#,
         )
         .map_err(|error| format!("Ошибка подготовки чтения vault_items: {}", error))?;
@@ -129,6 +146,7 @@ fn load_vault_list_items(connection: &Connection) -> Result<Vec<VaultListItem>, 
                 tags: parse_tags(row.get(6)?),
                 created_at: row.get(7)?,
                 updated_at: row.get(8)?,
+                sort_order: row.get(9)?,
             })
         })
         .map_err(|error| format!("Ошибка чтения vault_items: {}", error))?;
@@ -266,6 +284,7 @@ pub fn vault_create(
         .lock()
         .map_err(|_| "Ошибка блокировки SQLite соединения".to_string())?;
     let now = now_unix_ms();
+    let sort_order = next_vault_sort_order(&connection)?;
     let encrypted_password = encrypt_vault_secret(&app, &input.password)?;
     let item = VaultStoredItem {
         id: random_id("vault"),
@@ -289,14 +308,15 @@ pub fn vault_create(
             .collect(),
         created_at: now.clone(),
         updated_at: now,
+        sort_order,
     };
     let tags_json = serde_json::to_string(&item.tags)
         .map_err(|error| format!("Ошибка сериализации тегов vault: {}", error))?;
     connection
         .execute(
             r#"
-            INSERT INTO vault_items (id, title, service, username, password, url, notes, tags_json, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            INSERT INTO vault_items (id, title, service, username, password, url, notes, tags_json, created_at, updated_at, sort_order)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
             "#,
             params![
                 &item.id,
@@ -308,7 +328,8 @@ pub fn vault_create(
                 &item.notes,
                 tags_json,
                 &item.created_at,
-                &item.updated_at
+                &item.updated_at,
+                item.sort_order
             ],
         )
         .map_err(|error| format!("Ошибка сохранения vault-записи: {}", error))?;
@@ -336,7 +357,7 @@ pub fn vault_update(
         let mut statement = connection
             .prepare(
                 r#"
-                SELECT id, title, service, username, password, url, notes, tags_json, created_at, updated_at
+                SELECT id, title, service, username, password, url, notes, tags_json, created_at, updated_at, sort_order
                 FROM vault_items
                 WHERE id = ?1
                 "#,
@@ -355,6 +376,7 @@ pub fn vault_update(
                     tags: parse_tags(row.get(7)?),
                     created_at: row.get(8)?,
                     updated_at: row.get(9)?,
+                    sort_order: row.get(10)?,
                 })
             })
             .optional()
@@ -385,6 +407,7 @@ pub fn vault_update(
             .collect(),
         created_at: existing.created_at,
         updated_at: now_unix_ms(),
+        sort_order: existing.sort_order,
     };
 
     let tags_json = serde_json::to_string(&updated.tags)
@@ -428,6 +451,55 @@ pub fn vault_delete(database: State<'_, DatabaseState>, id: String) -> Result<bo
     }
     append_vault_event(&connection, &id, "deleted")?;
     Ok(true)
+}
+
+/// Persist manual ordering of vault list (`sort_order` indices match `ordered_ids`).
+#[tauri::command]
+pub fn vault_reorder(
+    database: State<'_, DatabaseState>,
+    ordered_ids: Vec<String>,
+) -> Result<(), String> {
+    let mut connection = database
+        .connection
+        .lock()
+        .map_err(|_| "Ошибка блокировки SQLite соединения".to_string())?;
+
+    let total: i64 = connection
+        .query_row("SELECT COUNT(*) FROM vault_items", [], |row| row.get(0))
+        .map_err(|error| format!("Ошибка подсчёта vault_items: {}", error))?;
+
+    if ordered_ids.len() != total as usize {
+        return Err("Некорректный список записей для сортировки".to_string());
+    }
+
+    let mut seen: HashSet<&str> = HashSet::new();
+    for id in &ordered_ids {
+        if !seen.insert(id.as_str()) {
+            return Err("Дубликат id в порядке сортировки".to_string());
+        }
+    }
+
+    let transaction = connection
+        .transaction()
+        .map_err(|error| format!("Ошибка транзакции vault: {}", error))?;
+
+    for (index, id) in ordered_ids.iter().enumerate() {
+        let updated = transaction
+            .execute(
+                "UPDATE vault_items SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, id],
+            )
+            .map_err(|error| format!("Ошибка обновления sort_order: {}", error))?;
+        if updated != 1 {
+            return Err(format!("Неизвестный id vault: {}", id));
+        }
+    }
+
+    transaction
+        .commit()
+        .map_err(|error| format!("Ошибка фиксации порядка vault: {}", error))?;
+
+    Ok(())
 }
 
 /// Reveal a vault item

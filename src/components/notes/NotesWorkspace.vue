@@ -9,6 +9,7 @@ import { TRANSLATIONS } from '@/translations/translations'
 import { getNoteBackground } from '@/utils/noteVisuals'
 import { useViewPageStyles } from '@/composables/useViewPageStyles'
 import { useNotesSearchFilter } from '@/composables/useNotesSearchFilter'
+import { useListDragReorder } from '@/composables/useListDragReorder'
 
 const styles = useViewPageStyles()
 
@@ -19,7 +20,33 @@ const dialogsRef = ref<InstanceType<typeof NotesDialogs> | null>(null)
 const searchQuery = ref('')
 
 const sortedNotes = computed(() => notesStore.sortNotes(notesStore.getActiveNotesByLayer(), 'important'))
-const { filteredNotes } = useNotesSearchFilter(searchQuery, sortedNotes)
+const { filteredNotes, isSearchActive } = useNotesSearchFilter(searchQuery, sortedNotes)
+
+const reorderEnabled = computed(() => !isSearchActive.value)
+
+const listDrag = useListDragReorder({
+  enabled: reorderEnabled,
+  canDrop: (draggedId, targetId) => {
+    const a = notesStore.getNote(draggedId)
+    const b = notesStore.getNote(targetId)
+    if (!a || !b || a.deletedAt || b.deletedAt) return false
+    return a.layerId === b.layerId && Boolean(a.isImportant) === Boolean(b.isImportant)
+  },
+  onReorder: (draggedId, targetId, placeBefore) => {
+    notesStore.reorderActiveNoteInLayer(draggedId, targetId, placeBefore)
+  },
+})
+
+const {
+  draggingId,
+  dragOverId,
+  isDragOverBefore,
+  onHandleDragStart,
+  onCardDragOver,
+  onCardDragLeave,
+  onCardDrop,
+  onDragEnd,
+} = listDrag
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
@@ -50,9 +77,19 @@ onMounted(async () => {
         :background-color="getNoteBackground(note)"
         :pin-title="t('pinNoteTitle')"
         :delete-title="t('deleteNoteTitle')"
+        :reorder-enabled="reorderEnabled"
+        :drag-handle-title="t('dragToReorderTitle')"
+        :is-dragging="draggingId === note.id"
+        :is-drop-target="dragOverId === note.id"
+        :drop-before="isDragOverBefore"
         @edit="(n) => dialogsRef?.openEditModal(n)"
         @toggle-important="notesStore.toggleImportant"
         @delete="(id) => dialogsRef?.promptDeleteNote(id)"
+        @drag-handle-start="(e) => onHandleDragStart(e, note.id)"
+        @card-drag-over="(e) => onCardDragOver(e, note.id)"
+        @card-drag-leave="(e) => onCardDragLeave(e, note.id)"
+        @card-drop="(e) => onCardDrop(e, note.id)"
+        @card-drag-end="onDragEnd"
       />
     </div>
 

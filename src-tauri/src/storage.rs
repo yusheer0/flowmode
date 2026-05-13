@@ -10,6 +10,48 @@ use crate::security::migrate_vault_passwords;
 
 const SQLITE_FILE_NAME: &str = "flowmode.sqlite";
 
+fn migrate_vault_sort_order(connection: &Connection) -> Result<(), String> {
+    let mut statement = connection
+        .prepare("PRAGMA table_info(vault_items)")
+        .map_err(|error| format!("Ошибка PRAGMA vault_items: {}", error))?;
+    let column_names: Vec<String> = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|error| format!("Ошибка чтения PRAGMA vault_items: {}", error))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("Ошибка обработки PRAGMA vault_items: {}", error))?;
+
+    if column_names.iter().any(|name| name == "sort_order") {
+        return Ok(());
+    }
+
+    connection
+        .execute(
+            "ALTER TABLE vault_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+            [],
+        )
+        .map_err(|error| format!("Ошибка ALTER vault_items (sort_order): {}", error))?;
+
+    let mut statement = connection
+        .prepare("SELECT id FROM vault_items ORDER BY updated_at DESC")
+        .map_err(|error| format!("Ошибка подготовки миграции sort_order: {}", error))?;
+    let ids: Vec<String> = statement
+        .query_map([], |row| row.get(0))
+        .map_err(|error| format!("Ошибка чтения id vault при миграции: {}", error))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("Ошибка обработки id vault: {}", error))?;
+
+    for (index, id) in ids.iter().enumerate() {
+        connection
+            .execute(
+                "UPDATE vault_items SET sort_order = ?1 WHERE id = ?2",
+                params![index as i64, id],
+            )
+            .map_err(|error| format!("Ошибка назначения sort_order: {}", error))?;
+    }
+
+    Ok(())
+}
+
 /// Database state
 pub struct DatabaseState {
     pub connection: Mutex<Connection>,
@@ -66,7 +108,8 @@ fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
               notes TEXT,
               tags_json TEXT NOT NULL,
               created_at TEXT NOT NULL,
-              updated_at TEXT NOT NULL
+              updated_at TEXT NOT NULL,
+              sort_order INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS vault_events (
@@ -89,6 +132,8 @@ fn open_database(app: &tauri::AppHandle) -> Result<Connection, String> {
             "#,
         )
         .map_err(|error| format!("Ошибка инициализации SQLite схемы: {}", error))?;
+    migrate_vault_sort_order(&connection)
+        .map_err(|error| format!("Ошибка миграции vault sort_order: {}", error))?;
     migrate_vault_passwords(app, &connection)
         .map_err(|error| format!("Ошибка миграции vault-паролей: {}", error))?;
     Ok(connection)

@@ -23,5 +23,7 @@ export function useVaultListFilter(items: Ref<VaultItem[]>, searchQuery: Ref<str
     })
   })
 
-  return { filteredItems }
+  const isSearchActive = computed(() => searchQuery.value.trim().length > 0)
+
+  return { filteredItems, isSearchActive }
 }

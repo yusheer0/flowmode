@@ -105,6 +105,20 @@ function toVaultItem(devItem: VaultDevItem): VaultItem {
   return item
 }
 
+function sortDevVaultItemsByOrder(source: VaultDevItem[]): VaultDevItem[] {
+  return [...source].sort((a, b) => {
+    const ao = typeof a.sortOrder === 'number' ? a.sortOrder : 0
+    const bo = typeof b.sortOrder === 'number' ? b.sortOrder : 0
+    if (ao !== bo) return ao - bo
+    return String(b.updatedAt).localeCompare(String(a.updatedAt))
+  })
+}
+
+function nextDevVaultSortOrder(source: VaultDevItem[]): number {
+  if (source.length === 0) return 0
+  return Math.min(...source.map(i => (typeof i.sortOrder === 'number' ? i.sortOrder : 0))) - 1
+}
+
 function createVaultEvent(itemId: string, type: VaultEvent['type']): VaultEvent {
   return {
     id: crypto.randomUUID(),
@@ -385,6 +399,10 @@ export const useNotesStore = defineStore('notes', () => {
       || legacyPayload?.criticality
     const normalizedLayerId = normalizeLayerId(raw, legacyPayload)
 
+    const manualOrder = typeof raw.manualOrder === 'number'
+      ? raw.manualOrder
+      : undefined
+
     return {
       id: raw.id || crypto.randomUUID(),
       title: normalizedTitle,
@@ -396,6 +414,50 @@ export const useNotesStore = defineStore('notes', () => {
       updatedAt: raw.updatedAt || new Date().toISOString(),
       isImportant: raw.isImportant || false,
       deletedAt: raw.deletedAt,
+      manualOrder,
+    }
+  }
+
+  function compareNotesInSameTier(a: Note, b: Note): number {
+    const am = a.manualOrder ?? Number.MAX_SAFE_INTEGER
+    const bm = b.manualOrder ?? Number.MAX_SAFE_INTEGER
+    if (am !== bm) return am - bm
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  }
+
+  function normalizeManualOrdersInTier(layerId: string, isImportant: boolean): void {
+    const tier = notes.value.filter(n =>
+      !n.deletedAt && n.layerId === layerId && Boolean(n.isImportant) === isImportant)
+    tier.sort(compareNotesInSameTier)
+    tier.forEach((n, i) => {
+      if (n.manualOrder !== i) {
+        n.manualOrder = i
+        persistSingleNote(n)
+      }
+    })
+  }
+
+  function ensureManualOrders(): void {
+    const active = notes.value.filter(n => !n.deletedAt)
+    const byLayer = new Map<string, Note[]>()
+    for (const n of active) {
+      const list = byLayer.get(n.layerId) ?? []
+      list.push(n)
+      byLayer.set(n.layerId, list)
+    }
+    for (const [, layerNotes] of byLayer) {
+      for (const isImportant of [true, false]) {
+        const tier = layerNotes.filter(n => Boolean(n.isImportant) === isImportant)
+        if (tier.length === 0) continue
+        if (!tier.some(n => n.manualOrder === undefined)) continue
+        tier.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        tier.forEach((n, i) => {
+          if (n.manualOrder !== i) {
+            n.manualOrder = i
+            void notesUpsert(n)
+          }
+        })
+      }
     }
   }
 
@@ -488,6 +550,8 @@ export const useNotesStore = defineStore('notes', () => {
     }
     persistedNoteIds.value = new Set(notes.value.map(note => note.id))
 
+    ensureManualOrders()
+
     if (shouldPersistLayers) {
       saveLayers()
     }
@@ -579,6 +643,8 @@ export const useNotesStore = defineStore('notes', () => {
     saveLayers()
     saveActiveLayer()
     saveToStorage()
+    normalizeManualOrdersInTier(fallbackLayer.id, true)
+    normalizeManualOrdersInTier(fallbackLayer.id, false)
     return { success: true }
   }
 
@@ -603,7 +669,17 @@ export const useNotesStore = defineStore('notes', () => {
     }
     notes.value.unshift(newNote)
     markUserDataOwned()
+    const peers = notes.value.filter(n =>
+      !n.deletedAt && n.layerId === targetLayerId && !n.isImportant && n.id !== newNote.id)
+    if (peers.length === 0) {
+      newNote.manualOrder = 0
+    }
+    else {
+      const minOrder = Math.min(...peers.map(n => n.manualOrder ?? 0))
+      newNote.manualOrder = minOrder - 1
+    }
     persistSingleNote(newNote)
+    normalizeManualOrdersInTier(targetLayerId, false)
   }
 
   function updateNote(
@@ -644,10 +720,13 @@ export const useNotesStore = defineStore('notes', () => {
     if (index !== -1) {
       // Перемещаем в корзину вместо удаления
       const note = notes.value[index]
+      const layerId = note.layerId
+      const wasImportant = Boolean(note.isImportant)
       note.deletedAt = new Date().toISOString()
       notes.value.splice(index, 1)
       notes.value.push(note)
       persistSingleNote(note)
+      normalizeManualOrdersInTier(layerId, wasImportant)
     }
   }
 
@@ -660,21 +739,50 @@ export const useNotesStore = defineStore('notes', () => {
     const index = notes.value.findIndex(n => n.id === id)
     if (index !== -1) {
       const note = notes.value[index]
+      const layerId = note.layerId
+      const isImportant = Boolean(note.isImportant)
       note.deletedAt = undefined
       note.updatedAt = new Date().toISOString()
       // Перемещаем в начало
       notes.value.splice(index, 1)
       notes.value.unshift(note)
       persistSingleNote(note)
+      const peers = notes.value.filter(n =>
+        !n.deletedAt && n.layerId === layerId && Boolean(n.isImportant) === isImportant && n.id !== note.id)
+      if (peers.length === 0) {
+        note.manualOrder = 0
+      }
+      else {
+        const minOrder = Math.min(...peers.map(n => n.manualOrder ?? 0))
+        note.manualOrder = minOrder - 1
+      }
+      persistSingleNote(note)
+      normalizeManualOrdersInTier(layerId, isImportant)
     }
   }
 
   function toggleImportant(id: string): void {
     const index = notes.value.findIndex(n => n.id === id)
     if (index !== -1) {
-      notes.value[index].isImportant = !notes.value[index].isImportant
-      notes.value[index].updatedAt = new Date().toISOString()
-      persistSingleNote(notes.value[index])
+      const note = notes.value[index]
+      const layerId = note.layerId
+      const prevImportant = Boolean(note.isImportant)
+      note.isImportant = !note.isImportant
+      note.updatedAt = new Date().toISOString()
+      persistSingleNote(note)
+      normalizeManualOrdersInTier(layerId, prevImportant)
+      const nowImportant = Boolean(note.isImportant)
+      const peers = notes.value.filter(n =>
+        !n.deletedAt && n.layerId === layerId && Boolean(n.isImportant) === nowImportant && n.id !== id)
+      if (peers.length === 0) {
+        note.manualOrder = 0
+      }
+      else {
+        const minOrder = Math.min(...peers.map(n => n.manualOrder ?? 0))
+        note.manualOrder = minOrder - 1
+      }
+      persistSingleNote(note)
+      normalizeManualOrdersInTier(layerId, nowImportant)
     }
   }
 
@@ -709,12 +817,44 @@ export const useNotesStore = defineStore('notes', () => {
         return sorted.sort((a, b) => {
           if (a.isImportant && !b.isImportant) return -1
           if (!a.isImportant && b.isImportant) return 1
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          return compareNotesInSameTier(a, b)
         })
       case 'newest':
       default:
         return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     }
+  }
+
+  function reorderActiveNoteInLayer(draggedId: string, targetId: string, placeBefore: boolean): void {
+    if (draggedId === targetId) return
+    const dragged = notes.value.find(n => n.id === draggedId && !n.deletedAt)
+    const target = notes.value.find(n => n.id === targetId && !n.deletedAt)
+    if (!dragged || !target) return
+    if (dragged.layerId !== target.layerId) return
+    if (Boolean(dragged.isImportant) !== Boolean(target.isImportant)) return
+
+    const isImportant = Boolean(dragged.isImportant)
+    const tier = notes.value
+      .filter(n =>
+        !n.deletedAt && n.layerId === dragged.layerId && Boolean(n.isImportant) === isImportant)
+      .sort(compareNotesInSameTier)
+
+    const ordered = tier.map(n => n.id)
+    const next = ordered.filter(id => id !== draggedId)
+    const targetIndexInNext = next.indexOf(targetId)
+    if (targetIndexInNext === -1) return
+
+    const insertAt = placeBefore ? targetIndexInNext : targetIndexInNext + 1
+    next.splice(insertAt, 0, draggedId)
+
+    next.forEach((id, i) => {
+      const n = notes.value.find(x => x.id === id)
+      if (n && n.manualOrder !== i) {
+        n.manualOrder = i
+        persistSingleNote(n)
+      }
+    })
+    markUserDataOwned()
   }
 
   function setActiveLayer(layerId: string): void {
@@ -742,6 +882,7 @@ export const useNotesStore = defineStore('notes', () => {
     getTrashedNotes,
     clearTrash,
     sortNotes,
+    reorderActiveNoteInLayer,
     setActiveLayer,
     getLayerName,
     canCreateCustomLayer,
@@ -807,7 +948,7 @@ export const useVaultStore = defineStore('vault', () => {
     clearError()
     try {
       if (shouldUseVaultFallback()) {
-        items.value = readDevVaultItems().map(toVaultItem)
+        items.value = sortDevVaultItemsByOrder(readDevVaultItems()).map(toVaultItem)
         return
       }
       items.value = await invoke<VaultItem[]>('vault_list')
@@ -850,6 +991,8 @@ export const useVaultStore = defineStore('vault', () => {
     try {
       if (shouldUseVaultFallback()) {
         const now = new Date().toISOString()
+        const existing = readDevVaultItems()
+        const sortOrder = nextDevVaultSortOrder(existing)
         const createdDevItem: VaultDevItem = {
           id: crypto.randomUUID(),
           title: normalized.title,
@@ -862,10 +1005,11 @@ export const useVaultStore = defineStore('vault', () => {
           tags: normalized.tags,
           createdAt: now,
           updatedAt: now,
+          sortOrder,
         }
-        const nextItems = [createdDevItem, ...readDevVaultItems()]
+        const nextItems = [createdDevItem, ...existing]
         writeDevVaultItems(nextItems)
-        items.value = nextItems.map(toVaultItem)
+        items.value = sortDevVaultItemsByOrder(nextItems).map(toVaultItem)
         events.value = addDevVaultEvent(createdDevItem.id, 'created')
         return true
       }
@@ -1054,6 +1198,35 @@ export const useVaultStore = defineStore('vault', () => {
     }
   }
 
+  async function reorderItems(orderedIds: string[]): Promise<boolean> {
+    const currentIds = new Set(items.value.map(i => i.id))
+    if (orderedIds.length !== currentIds.size) return false
+    for (const id of orderedIds) {
+      if (!currentIds.has(id)) return false
+    }
+    clearError()
+    try {
+      if (shouldUseVaultFallback()) {
+        const source = sortDevVaultItemsByOrder(readDevVaultItems())
+        const map = new Map(source.map(i => [i.id, i]))
+        const next: VaultDevItem[] = orderedIds.map((id, index) => {
+          const row = map.get(id)
+          if (!row) throw new Error('vault row missing')
+          return { ...row, sortOrder: index }
+        })
+        writeDevVaultItems(next)
+        items.value = sortDevVaultItemsByOrder(next).map(toVaultItem)
+        return true
+      }
+      await invoke<void>('vault_reorder', { orderedIds })
+      await refreshItems()
+      return true
+    } catch (e) {
+      error.value = `Ошибка сохранения порядка: ${e}`
+      return false
+    }
+  }
+
   return {
     items,
     events,
@@ -1072,6 +1245,7 @@ export const useVaultStore = defineStore('vault', () => {
     copyUsername,
     copyPassword,
     generatePassword,
+    reorderItems,
   }
 })
 

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useVaultVirtualGrid } from '@/composables/useVaultVirtualGrid'
 import { Cog, Grid2x2, Search, SquarePlus, Box } from 'lucide-vue-next'
 import VaultItemCard from '@/components/vault/VaultItemCard.vue'
 import VaultDialogs from '@/components/vault/VaultDialogs.vue'
 import { useCanvasBackground } from '@/composables/useCanvasBackground'
 import { useVaultListFilter } from '@/composables/useVaultListFilter'
+import { useListDragReorder } from '@/composables/useListDragReorder'
+import { VAULT_VIRTUAL_MIN_CARD_WIDTH } from '@/composables/useVaultVirtualGrid'
 import { useSettingsStore, useVaultStore } from '@/stores'
 import { TRANSLATIONS } from '@/translations/translations'
 import { useViewPageStyles } from '@/composables/useViewPageStyles'
@@ -17,16 +18,34 @@ const dialogsRef = ref<InstanceType<typeof VaultDialogs> | null>(null)
 
 const searchQuery = ref('')
 
-const { filteredItems } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
+const { filteredItems, isSearchActive } = useVaultListFilter(computed(() => vaultStore.items), searchQuery)
+
+const reorderEnabled = computed(() => !isSearchActive.value)
+
+const listDrag = useListDragReorder({
+  enabled: reorderEnabled,
+  canDrop: () => true,
+  onReorder: (draggedId, targetId, placeBefore) => {
+    const order = filteredItems.value.map(i => i.id)
+    const next = order.filter(id => id !== draggedId)
+    const targetIndexInNext = next.indexOf(targetId)
+    if (targetIndexInNext === -1) return
+    const insertAt = placeBefore ? targetIndexInNext : targetIndexInNext + 1
+    next.splice(insertAt, 0, draggedId)
+    void vaultStore.reorderItems(next)
+  },
+})
+
 const {
-  MIN_CARD_WIDTH,
-  scrollHost,
-  listPane,
-  visibleItems,
-  topSpacerHeight,
-  bottomSpacerHeight,
-  onListScroll,
-} = useVaultVirtualGrid(filteredItems)
+  draggingId,
+  dragOverId,
+  isDragOverBefore,
+  onHandleDragStart,
+  onCardDragOver,
+  onCardDragLeave,
+  onCardDrop,
+  onDragEnd,
+} = listDrag
 
 const currentLang = computed(() => settingsStore.settings.language)
 const t = (key: keyof typeof TRANSLATIONS.en): string => TRANSLATIONS[currentLang.value][key]
@@ -40,29 +59,36 @@ onMounted(async () => {
 
 <template>
   <section :class="styles.vaultView">
-    <div ref="scrollHost" :class="styles.canvas" :style="canvasStyle" @scroll="onListScroll">
-      <div :class="styles.virtualSpacer" :style="{ height: `${topSpacerHeight}px` }"></div>
+    <div :class="styles.canvas" :style="canvasStyle">
       <div
-        ref="listPane"
         :class="styles.listPane"
-        :style="{ '--vault-card-min-width': `${MIN_CARD_WIDTH}px` }"
+        :style="{ '--vault-card-min-width': `${VAULT_VIRTUAL_MIN_CARD_WIDTH}px` }"
       >
         <VaultItemCard
-          v-for="item in visibleItems"
+          v-for="item in filteredItems"
           :key="item.id"
           :item="item"
           :styles="styles"
           :login-label="t('loginLabel')"
           :password-label="t('passwordLabel')"
           :delete-title="t('delete')"
-          @edit="(item) => dialogsRef?.openEditModal(item)"
+          :reorder-enabled="reorderEnabled"
+          :drag-handle-title="t('dragToReorderTitle')"
+          :is-dragging="draggingId === item.id"
+          :is-drop-target="dragOverId === item.id"
+          :drop-before="isDragOverBefore"
+          @edit="(entry) => dialogsRef?.openEditModal(entry)"
           @delete="(id) => dialogsRef?.promptDeleteItem(id)"
+          @drag-handle-start="(e) => onHandleDragStart(e, item.id)"
+          @card-drag-over="(e) => onCardDragOver(e, item.id)"
+          @card-drag-leave="(e) => onCardDragLeave(e, item.id)"
+          @card-drop="(e) => onCardDrop(e, item.id)"
+          @card-drag-end="onDragEnd"
         />
         <p v-if="!filteredItems.length" :class="styles.emptyState">
           {{ t('emptyState') }}
         </p>
       </div>
-      <div :class="styles.virtualSpacer" :style="{ height: `${bottomSpacerHeight}px` }"></div>
     </div>
 
     <VaultDialogs ref="dialogsRef" v-model:search-query="searchQuery" />

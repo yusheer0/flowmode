@@ -68,6 +68,7 @@ fn main() {
             vault::vault_create,
             vault::vault_update,
             vault::vault_delete,
+            vault::vault_reorder,
             vault::vault_reveal,
             vault::vault_log_copy,
             vault::vault_generate_password,

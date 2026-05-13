@@ -29,6 +29,8 @@ export function useNotesSearchFilter(searchQuery: Ref<string>, sortedNotes: Comp
       .map(entry => entry.note)
   })
 
+  const isSearchActive = computed(() => debouncedSearchQuery.value.length > 0)
+
   onBeforeUnmount(() => {
     if (searchDebounceTimer) {
       clearTimeout(searchDebounceTimer)
@@ -36,5 +38,5 @@ export function useNotesSearchFilter(searchQuery: Ref<string>, sortedNotes: Comp
     }
   })
 
-  return { filteredNotes }
+  return { filteredNotes, isSearchActive }
 }
